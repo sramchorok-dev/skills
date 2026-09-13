@@ -1,0 +1,37 @@
+name: Skill request
+description: 반복 업무를 공통 Agent 스킬로 제안
+title: "[skill] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 반복 업무
+      description: 현재 반복되는 입력, 작업, 결과
+    validations:
+      required: true
+  - type: textarea
+    id: trigger
+    attributes:
+      label: 발동 문구
+      description: Agent에게 실제로 말하는 요청 예시
+    validations:
+      required: true
+  - type: textarea
+    id: completion
+    attributes:
+      label: 완료 조건
+      description: 성공 여부를 확인할 수 있는 결과와 검증
+    validations:
+      required: true
+  - type: dropdown
+    id: external
+    attributes:
+      label: 외부 시스템 변경
+      options:
+        - 없음
+        - 공개 게시 또는 배포
+        - 메시지 전송
+        - 데이터 생성 또는 수정
+    validations:
+      required: true

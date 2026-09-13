@@ -1,0 +1,37 @@
+name: Skill bug
+description: 스킬 실행 실패나 잘못된 결과 제보
+title: "[bug] "
+labels: [bug]
+body:
+  - type: input
+    id: skill
+    attributes:
+      label: 스킬 이름
+    validations:
+      required: true
+  - type: textarea
+    id: request
+    attributes:
+      label: 사용자 요청
+      description: 비밀값과 개인정보를 제거한 실제 요청
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 결과
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 결과
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: 재현·검증 정보
+      description: 실행 명령, 종료 코드, 공개 가능한 오류
+    validations:
+      required: true
