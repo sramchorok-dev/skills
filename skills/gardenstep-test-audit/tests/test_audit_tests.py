@@ -691,6 +691,71 @@ class GitAndCliTest(unittest.TestCase):
             )
             self.assertEqual(0, tolerant.returncode)
 
+    def test_legacy_smells_outside_changed_lines_do_not_affect_verdict(self):
+        legacy_spec = (
+            "import { test, expect } from '@playwright/test';\n"
+            "test('옛 테스트는 느리게 기다린다', async ({ page }) => {\n"
+            "  await page.waitForTimeout(500);\n"
+            "  await expect(page.getByTestId('x')).toBeVisible();\n"
+            "});\n"
+        )
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self.make_git_repo(root)
+            # base(dev)에 부채가 있는 spec을 심는다
+            subprocess.run(["git", "checkout", "-q", "dev"], cwd=root, check=True)
+            write(root, "tests/e2e/tier2-old.spec.ts", legacy_spec)
+            subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "legacy"], cwd=root, check=True)
+            subprocess.run(["git", "checkout", "-qb", "feat/clean"], cwd=root, check=True)
+            write(root, "tests/e2e/tier2-old.spec.ts", legacy_spec + "test('값이 없으면 빈 상태를 보여준다', async ({ page }) => {\n  await expect(page.getByTestId('y')).toHaveText('없음');\n});\n")
+            subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "add clean test"], cwd=root, check=True)
+            report = audit.audit(root, base="dev")
+            self.assertEqual([], report["smells"])
+            self.assertEqual(["S-HARD-WAIT"], [s["rule"] for s in report["legacy"]])
+            self.assertEqual("PASS", report["verdict"])
+            self.assertIn("기존 부채", audit.render_markdown(report))
+            # 변경한 줄에 스멜이 있으면 그것만 판정에 들어간다
+            write(root, "tests/e2e/tier2-old.spec.ts", legacy_spec + "test('새 테스트', async ({ page }) => {\n  expect(true).toBe(true);\n});\n")
+            subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "bad test"], cwd=root, check=True)
+            report = audit.audit(root, base="dev")
+            self.assertEqual({"S-TAUTOLOGY"}, {s["rule"] for s in report["smells"]})
+            self.assertEqual("FAIL", report["verdict"])
+            # 새 파일은 전체가 변경 줄이다
+            write(root, "tests/e2e/tier2-new.spec.ts", legacy_spec)
+            subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "new file"], cwd=root, check=True)
+            report = audit.audit(root, base="dev")
+            self.assertIn("tests/e2e/tier2-new.spec.ts", {s["file"] for s in report["smells"] if s["rule"] == "S-HARD-WAIT"})
+
+    def test_block_smell_counts_as_changed_when_body_line_changes(self):
+        java = """class CouponServiceTest {
+  @Test
+  void noDisplayName() {
+    assertThat(sut.apply(10000, "A").total()).isEqualTo(9000);
+  }
+}
+"""
+        rel = "src/test/java/ai/gardenstep/gardenstepserver/application/tier2/coupon/CouponServiceTest.java"
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            subprocess.run(["git", "init", "-q", "-b", "dev"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "t"], cwd=root, check=True)
+            server_repo(root)
+            write(root, rel, java)
+            subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "base"], cwd=root, check=True)
+            subprocess.run(["git", "checkout", "-qb", "feat/x"], cwd=root, check=True)
+            write(root, rel, java.replace("isEqualTo(9000)", "isEqualTo(9500)"))  # 본문 한 줄만 수정
+            subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "touch body"], cwd=root, check=True)
+            report = audit.audit(root, base="dev")
+            self.assertEqual(["S-DISPLAY-NAME"], [s["rule"] for s in report["smells"]])
+            self.assertEqual([], report["legacy"])
+
     def test_working_tree_mode_includes_uncommitted_and_untracked(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

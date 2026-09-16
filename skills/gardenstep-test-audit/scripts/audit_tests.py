@@ -150,6 +150,32 @@ def changed_files(root: Path, base: str, head: str | None = "HEAD") -> list[str]
     return entries + untracked
 
 
+_HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@", re.M)
+
+
+def changed_line_numbers(root: Path, base: str, head: str | None, path: str) -> set[int] | None:
+    """head 쪽에서 추가·수정된 줄 번호. 새 파일이거나 알 수 없으면 None(=전체)."""
+    try:
+        if head is None:
+            ref = _git(root, "merge-base", base, "HEAD").strip()
+            tracked = _git(root, "ls-files", "--error-unmatch", "--", path)
+            if not tracked.strip():
+                return None
+            raw = _git(root, "diff", "-U0", "--no-color", "--no-renames", ref, "--", path)
+        else:
+            raw = _git(root, "diff", "-U0", "--no-color", "--no-renames", f"{base}...{head}", "--", path)
+    except subprocess.CalledProcessError:
+        return None
+    if "new file mode" in raw:
+        return None
+    lines: set[int] = set()
+    for match in _HUNK_RE.finditer(raw):
+        start = int(match.group(1))
+        count = int(match.group(2)) if match.group(2) is not None else 1
+        lines.update(range(start, start + count))
+    return lines
+
+
 _WALK_IGNORE = {".git", "node_modules", ".next", "build", "dist", "out", "test-results", "playwright-report", ".gradle", "__pycache__"}
 
 
@@ -364,8 +390,16 @@ def _read(path: Path) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _smell(path: str, line: int, rule: str, level: str, snippet: str, fix: str) -> dict:
-    return {"file": path, "line": line, "rule": rule, "level": level, "snippet": snippet.strip()[:120], "fix": fix}
+def _smell(path: str, line: int, rule: str, level: str, snippet: str, fix: str, end_line: int | None = None) -> dict:
+    return {
+        "file": path,
+        "line": line,
+        "end_line": end_line or line,
+        "rule": rule,
+        "level": level,
+        "snippet": snippet.strip()[:120],
+        "fix": fix,
+    }
 
 
 _TS_LINE_RULES: list[tuple[re.Pattern[str], str, str, str]] = [
@@ -505,10 +539,11 @@ def _scan_ts(kind: str, path: str, text: str, root: Path | None = None) -> list[
         title = match.group(2)
         line_no = text.count("\n", 0, match.start()) + 1
         body = _ts_callback_body(text, match.end())
+        end_line = line_no + body.count("\n") + text[match.end(): text.find(body, match.end()) if body else match.end()].count("\n")
         if not _TS_ASSERT_RE.search(body) and not (helper_call and helper_call.search(body)):
-            smells.append(_smell(path, line_no, "S-NO-ASSERT", FAIL, match.group(0), "expect로 기대 결과를 단언한다 — 단언 없는 테스트는 통과해도 의미가 없다"))
+            smells.append(_smell(path, line_no, "S-NO-ASSERT", FAIL, match.group(0), "expect로 기대 결과를 단언한다 — 단언 없는 테스트는 통과해도 의미가 없다", end_line))
         if not _KOREAN_RE.search(title) and len(title) < 24:
-            smells.append(_smell(path, line_no, "S-TITLE", WARN, match.group(0), "제목을 '조건이면 기대 결과다' 한국어 문장으로 쓴다"))
+            smells.append(_smell(path, line_no, "S-TITLE", WARN, match.group(0), "제목을 '조건이면 기대 결과다' 한국어 문장으로 쓴다", end_line))
     return smells
 
 
@@ -562,16 +597,17 @@ def _scan_java(path: str, text: str) -> list[dict]:
         annotations = text[block_start: method.start()]
         line_no = text.count("\n", 0, method.start()) + 1
         body = text[method.end() - 1: _block_end(text, method.end() - 1)]
+        end_line = line_no + body.count("\n")
         has_assert = bool(_JAVA_ASSERT_RE.search(body)) or bool(helper_call and helper_call.search(body))
         has_mock = bool(_JAVA_MOCK_ONLY_RE.search(body))
         if method.group(1) == "contextLoads":
             continue  # Spring Boot 기본 스모크 — 컨텍스트 기동 자체가 단언
         if not has_assert and not has_mock:
-            smells.append(_smell(path, line_no, "S-NO-ASSERT", FAIL, method.group(0), "assertThat으로 결과를 단언한다"))
+            smells.append(_smell(path, line_no, "S-NO-ASSERT", FAIL, method.group(0), "assertThat으로 결과를 단언한다", end_line))
         elif not has_assert and has_mock:
-            smells.append(_smell(path, line_no, "S-MOCK-ONLY", WARN, method.group(0), "mock 호출 검증만 있는 테스트는 게이트 증거로 인정하지 않는다 — 결과 값을 단언하거나 통합 테스트로 보강한다"))
+            smells.append(_smell(path, line_no, "S-MOCK-ONLY", WARN, method.group(0), "mock 호출 검증만 있는 테스트는 게이트 증거로 인정하지 않는다 — 결과 값을 단언하거나 통합 테스트로 보강한다", end_line))
         if "@DisplayName" not in annotations:
-            smells.append(_smell(path, line_no, "S-DISPLAY-NAME", WARN, method.group(0), '@DisplayName("[단위|통합|API] 조건이면 기대 결과다")를 붙인다'))
+            smells.append(_smell(path, line_no, "S-DISPLAY-NAME", WARN, method.group(0), '@DisplayName("[단위|통합|API] 조건이면 기대 결과다")를 붙인다', end_line))
     return smells
 
 
@@ -656,6 +692,7 @@ def audit(
             "changed": classified,
             "rules": rules,
             "smells": smells,
+            "legacy": [],
             "pr_body": pr_findings,
             "exempt": "",
         }
@@ -673,7 +710,22 @@ def audit(
         path for _, path in parsed if classify_file(kind, path).startswith("test-") and classify_file(kind, path) != "test-fixture"
     ]
     rules = required_rules(kind, root, parsed)
-    smells = scan_smells(kind, root, test_files)
+    all_smells = scan_smells(kind, root, test_files)
+    smells: list[dict] = []
+    legacy: list[dict] = []
+    if base is not None and (root / ".git").exists():
+        # 변경한 줄(블록 단위 스멜은 블록 범위)에 걸린 것만 판정에 넣는다. 나머지는 기존 부채로 따로 보여준다.
+        line_cache: dict[str, set[int] | None] = {}
+        for smell in all_smells:
+            if smell["file"] not in line_cache:
+                line_cache[smell["file"]] = changed_line_numbers(root, base, head, smell["file"])
+            touched = line_cache[smell["file"]]
+            if touched is None or any(n in touched for n in range(smell["line"], smell["end_line"] + 1)):
+                smells.append(smell)
+            else:
+                legacy.append(smell)
+    else:
+        smells = all_smells
     pr_findings = check_pr_body(pr_body, root) if pr_body is not None else []
     if exempt:
         for rule in rules:
@@ -688,6 +740,7 @@ def audit(
         "changed": classified,
         "rules": rules,
         "smells": smells,
+        "legacy": legacy,
         "pr_body": pr_findings,
         "exempt": exempt or "",
     }
@@ -740,7 +793,7 @@ def render_markdown(report: dict) -> str:
     else:
         out.append("- 소스 변경이 없어 필수 테스트 규칙이 적용되지 않는다.")
     out.append("")
-    out.append("### 테스트 코드 스멜")
+    out.append("### 테스트 코드 스멜 (변경한 줄)")
     if report["smells"]:
         out.append("| 위치 | 수준 | 규칙 | 코드 | 고치는 법 |")
         out.append("|---|---|---|---|---|")
@@ -750,6 +803,15 @@ def render_markdown(report: dict) -> str:
             out.append(f"| `{smell['file']}:{smell['line']}` | {mark} {smell['level']} | {smell['rule']} | `{snippet}` | {smell['fix']} |")
     else:
         out.append("- 변경된 테스트 파일에서 스멜을 찾지 못했다.")
+    if report.get("legacy"):
+        out.append("")
+        counts: dict[str, int] = {}
+        for smell in report["legacy"]:
+            counts[smell["rule"]] = counts.get(smell["rule"], 0) + 1
+        summary = ", ".join(f"{rule} {n}" for rule, n in sorted(counts.items(), key=lambda kv: -kv[1]))
+        out.append(f"### 기존 부채 (변경하지 않은 줄 — 판정에 넣지 않음, {len(report['legacy'])}건)")
+        out.append(f"- {summary}")
+        out.append("- 같은 파일을 만졌으니 여유가 있으면 한두 개 같이 고친다. 의무는 아니다.")
     if report["pr_body"]:
         out.append("")
         out.append("### PR 본문")
