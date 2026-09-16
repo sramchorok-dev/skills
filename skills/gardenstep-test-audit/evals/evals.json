@@ -1,0 +1,35 @@
+{
+  "skill_name": "gardenstep-test-audit",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "gardenstep 레포 feat/coupon 브랜치의 PR이 우리 테스트 규칙 기준으로 머지 가능한지 점검해줘. base는 origin/dev.",
+      "expected_output": "scripts/audit_tests.py를 --base origin/dev --pr-body로 실행하고, 규칙 표·스멜 표·PR 본문 결과를 담은 영수증과 PASS/WARN/FAIL 판정, FAIL이면 파일·줄·고치는 법을 작성자에게 전달하는 질문형 문구로 제시. 테스트를 실제로 실행하지는 않음",
+      "files": ["tests/e2e/tier2-coupon.spec.ts", "tests/e2e/tier2-coupon.unit.spec.ts", "PR_BODY.md"]
+    },
+    {
+      "id": 2,
+      "prompt": "이 PR은 안내 문구만 바꾼 거라 테스트 없이 머지하고 싶어. 규칙상 되나?",
+      "expected_output": "스크립트 실행 결과 FE-E2E FAIL을 보여주되, 정책 §6 면제 절차(test-exempt 라벨 + 영수증 면제 줄 사유 + 리드 승인)를 안내. 면제 없이 통과시키지 않고, 문구가 검증 대상이면 toContainText 갱신을 권함",
+      "files": ["containers/shop/ShopClient.tsx"]
+    },
+    {
+      "id": 3,
+      "prompt": "서버 컨트롤러를 추가했고 Mockito 단위 테스트도 넣었어. 테스트 점검해줘.",
+      "expected_output": "SRV-API 규칙(MockMvc API 테스트 정상 1 + 4xx 1) 미충족을 FAIL로 판정하고, mock 호출 검증만 있는 테스트는 S-MOCK-ONLY로 게이트 증거 불인정임을 설명. ControllerTest 위치와 @DisplayName 규약을 안내",
+      "files": ["src/main/java/ai/gardenstep/gardenstepserver/application/tier2/coupon/presentation/Tier2CouponController.java", "src/test/java/ai/gardenstep/gardenstepserver/application/tier2/coupon/service/Tier2CouponServiceTest.java"]
+    },
+    {
+      "id": 5,
+      "prompt": "PR 말고, 지금 gardenstep_admin 레포에 있는 테스트 코드 전체를 우리 규칙으로 한번 훑어줘. 아직 커밋 안 한 것도 있어.",
+      "expected_output": "--all-tests로 레포 테스트 전부의 스멜을 표로 내고, 커밋 전 변경은 --base origin/dev --working-tree로 별도 점검. 전체 모드에서는 필수 규칙 매핑이 생략됨을 명시하고, 기존 부채는 이번 PR 차단 사유가 아니라 후속 이슈 후보로 구분",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "테스트가 다 초록인데 뭘 더 봐야 해? 빨리 머지하자.",
+      "expected_output": "초록은 실행 증거일 뿐 정책 충족이 아님을 말하고, 영수증·실패 경로·뮤테이션 확인·mock 경계·기대값 출처를 점검. 결제·금액·재고 변경이면 리드 승인 필수를 명시. 판정을 생략하지 않음",
+      "files": []
+    }
+  ]
+}

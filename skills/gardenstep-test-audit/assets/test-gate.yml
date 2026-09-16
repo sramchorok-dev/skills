@@ -1,0 +1,49 @@
+# 각 레포 .github/workflows/cicd.yml의 jobs: 아래에 그대로 붙인다.
+# PR에서만 돈다. 공개 저장소 sramchorok-dev/skills를 체크아웃하므로 토큰이 필요 없다.
+# 판정 FAIL이면 잡이 빨간 X가 되고, 영수증 전문이 PR의 Checks → Summary에 남는다.
+#
+# 무료 플랜에서는 이 잡을 "required check"로 잠글 수 없다(references/testing-policy.md §7).
+# 팀 규칙: 빨간 X 상태로 머지하지 않는다. 위반 머지는 dev에서 revert.
+#
+# 면제: PR에 `test-exempt` 라벨을 붙이면 FAIL 규칙이 WARN으로 내려간다. 스멜과 영수증 검사는 그대로 돈다.
+
+  test-gate:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository (full history for base...head)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout shared skills (public)
+        uses: actions/checkout@v4
+        with:
+          repository: sramchorok-dev/skills
+          ref: main
+          path: .skills
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # PR 본문은 env로 넘긴다 — ${{ }}를 run 스크립트에 직접 넣으면 인젝션 통로가 된다.
+      - name: Save PR body
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s' "$PR_BODY" > /tmp/pr-body.md
+
+      - name: Audit tests against team policy
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          EXEMPT: ${{ contains(github.event.pull_request.labels.*.name, 'test-exempt') && 'test-exempt 라벨' || '' }}
+        run: |
+          set -o pipefail
+          args=(--repo . --base "origin/${BASE_REF}" --pr-body /tmp/pr-body.md)
+          if [ -n "$EXEMPT" ]; then args+=(--exempt "$EXEMPT"); fi
+          python3 .skills/skills/gardenstep-test-audit/scripts/audit_tests.py "${args[@]}" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
