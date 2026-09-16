@@ -32,7 +32,16 @@ python3 "$SKILL_DIR/scripts/audit_tests.py" --repo . --base origin/dev --pr-body
 ```
 
 - 출력이 곧 영수증 초안이다: 변경 분류 → 필수 테스트 규칙(✅/❌/⚠️) → 스멜(파일:줄·규칙·고치는 법) → PR 본문 → 판정.
-- 종료 코드 1 = FAIL. `--json`은 기계 판독용, `--exempt "<사유>"`는 `test-exempt` 라벨과 같은 효과, `--changed-files`는 git 없이 목록 제공.
+- 종료 코드 1 = FAIL. `--json`은 기계 판독용, `--exempt "<사유>"`는 `test-exempt` 라벨과 같은 효과.
+
+상황에 따라 모드를 고른다. PR이 아니어도 된다.
+
+| 상황 | 명령 | 판정 범위 |
+|---|---|---|
+| PR·브랜치 (커밋됨) | `--base origin/dev` (필요하면 `--head <ref>`) | 필수 규칙 + 스멜 + PR 본문 |
+| 커밋 전 작업 트리 (PR 열기 전 자기 점검) | `--base origin/dev --working-tree` | 같음. 미추적 새 파일도 포함 |
+| 특정 파일 몇 개만 | `--changed-files list.txt` (`A path` / `M path` 한 줄씩) | 같음 (git 불필요) |
+| 레포의 기존 테스트 전부 (부채 조사·온보딩) | `--all-tests` | 스멜만. 변경↔테스트 매핑은 diff에서만 의미가 있다 |
 - 스크립트가 보는 규칙의 목록과 예시는 [references/smell-catalog.md](references/smell-catalog.md), 레포별 경로·명령은 [references/repo-commands.md](references/repo-commands.md).
 
 ### 3. 스크립트가 못 보는 것 — 사람 눈 6가지

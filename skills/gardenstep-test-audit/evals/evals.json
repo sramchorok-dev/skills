@@ -20,6 +20,12 @@
       "files": ["src/main/java/ai/gardenstep/gardenstepserver/application/tier2/coupon/presentation/Tier2CouponController.java", "src/test/java/ai/gardenstep/gardenstepserver/application/tier2/coupon/service/Tier2CouponServiceTest.java"]
     },
     {
+      "id": 5,
+      "prompt": "PR 말고, 지금 gardenstep_admin 레포에 있는 테스트 코드 전체를 우리 규칙으로 한번 훑어줘. 아직 커밋 안 한 것도 있어.",
+      "expected_output": "--all-tests로 레포 테스트 전부의 스멜을 표로 내고, 커밋 전 변경은 --base origin/dev --working-tree로 별도 점검. 전체 모드에서는 필수 규칙 매핑이 생략됨을 명시하고, 기존 부채는 이번 PR 차단 사유가 아니라 후속 이슈 후보로 구분",
+      "files": []
+    },
+    {
       "id": 4,
       "prompt": "테스트가 다 초록인데 뭘 더 봐야 해? 빨리 머지하자.",
       "expected_output": "초록은 실행 증거일 뿐 정책 충족이 아님을 말하고, 영수증·실패 경로·뮤테이션 확인·mock 경계·기대값 출처를 점검. 결제·금액·재고 변경이면 리드 승인 필수를 명시. 판정을 생략하지 않음",

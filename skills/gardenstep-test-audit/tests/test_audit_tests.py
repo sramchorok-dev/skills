@@ -405,6 +405,25 @@ class SmellTsTest(unittest.TestCase):
         self.assertEqual(1, len(no_assert))
         self.assertEqual(2, no_assert[0]["line"])
 
+    def test_helper_with_assertion_counts_as_assertion(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            fe_repo(root)
+            write(root, "tests/e2e/helpers/tier2.ts", "import { expect } from '@playwright/test';\nexport async function fillWizardUpToStyle(page) { await expect(page.getByTestId('x')).toBeVisible(); }\n")
+            text = (
+                "import { test, expect } from '@playwright/test';\n"
+                "import { fillWizardUpToStyle } from './helpers/tier2';\n"
+                "async function reachCart(page) { await page.goto('/cart'); await expect(page.getByTestId('tier2-cart-page')).toBeVisible(); }\n"
+                "test('위저드를 스타일까지 완주한다', async ({ page }) => { await fillWizardUpToStyle(page); });\n"
+                "test('카트에 도달한다', async ({ page }) => { await reachCart(page); });\n"
+                "test('재시도 횟수가 2 이상이다', async ({ page }) => { let n = 0; await expect.poll(() => n).toBeGreaterThanOrEqual(2); });\n"
+                "test('아무것도 확인하지 않는다', async ({ page }) => { await page.goto('/'); });\n"
+            )
+            write(root, "tests/e2e/tier2-x.spec.ts", text)
+            smells = audit.scan_smells("fe", root, ["tests/e2e/tier2-x.spec.ts"])
+            no_assert = [s["line"] for s in smells if s["rule"] == "S-NO-ASSERT"]
+            self.assertEqual([7], no_assert)
+
     def test_unit_spec_using_page_fixture_fails(self):
         text = (
             "import { test, expect } from '@playwright/test';\n"
@@ -523,6 +542,33 @@ class SmellJavaTest(unittest.TestCase):
         self.assertEqual(1, len(mock_only))
         self.assertEqual("WARN", mock_only[0]["level"])
         self.assertIn("S-DISPLAY-NAME", self.rules(smells))
+
+    def test_java_helper_assertion_display_name_order_and_context_loads(self):
+        text = """class CouponControllerTest {
+  @Test
+  @DisplayName("[API] code가 소문자면 400")
+  void create_lowercase_returns400() throws Exception {
+    expectBadRequest(post("/admin/coupons"), request("abc"));
+  }
+
+  @DisplayName("[API] 이름이 비면 400")
+  @Test
+  void create_blankName_returns400() throws Exception {
+    expectBadRequest(post("/admin/coupons"), request(""));
+  }
+
+  @Test
+  void contextLoads() {
+  }
+
+  private void expectBadRequest(MockHttpServletRequestBuilder builder, Object body) throws Exception {
+    mockMvc.perform(builder.content(json(body))).andExpect(status().isBadRequest());
+  }
+}
+"""
+        smells = self.smells_for(self.REL.replace("CouponServiceTest", "CouponControllerTest"), text)
+        self.assertEqual([], [s for s in smells if s["rule"] == "S-NO-ASSERT"])
+        self.assertEqual([], [s for s in smells if s["rule"] == "S-DISPLAY-NAME" and s["line"] < 15])
 
     def test_spring_boot_test_without_support_base_warns(self):
         text = """@SpringBootTest
@@ -644,6 +690,42 @@ class GitAndCliTest(unittest.TestCase):
                 text=True,
             )
             self.assertEqual(0, tolerant.returncode)
+
+    def test_working_tree_mode_includes_uncommitted_and_untracked(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self.make_git_repo(root)
+            write(root, "playwright.config.ts", "export default { retries: 1 };")  # base에 있던 파일의 커밋 안 한 수정
+            write(root, "tests/e2e/tier2-new.unit.spec.ts", GOOD_UNIT_SPEC)  # 미추적 새 파일
+            changed = audit.changed_files(root, "dev", head=None)
+            self.assertIn("M playwright.config.ts", changed)
+            self.assertIn("A lib/tier2/coupon.ts", changed)  # 브랜치에서 추가된 파일은 merge-base 기준 A
+            self.assertIn("A tests/e2e/tier2-new.unit.spec.ts", changed)
+            self.assertIn("A tests/e2e/tier2-coupon.unit.spec.ts", changed)  # 브랜치 커밋분도 포함
+            report = audit.audit(root, base="dev", head=None)
+            self.assertEqual("working-tree", report["mode"])
+            self.assertEqual("PASS", report["verdict"])
+
+    def test_all_tests_mode_scans_every_test_file_without_rules(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            fe_repo(root)
+            write(root, "tests/e2e/tier2-good.spec.ts", GOOD_BROWSER_SPEC)
+            write(root, "tests/e2e/tier2-bad.spec.ts", "import { test, expect } from '@playwright/test';\ntest('느리게 기다린다', async ({ page }) => { await page.waitForTimeout(500); await expect(page).toHaveURL('/'); });\n")
+            write(root, "node_modules/x/tests/e2e/ignored.spec.ts", "test.only('x', () => {});")
+            write(root, "containers/shop/ShopClient.tsx", "export default () => null;")
+            report = audit.audit(root, all_tests=True)
+            self.assertEqual("all-tests", report["mode"])
+            self.assertEqual([], report["rules"])
+            self.assertEqual(["tests/e2e/tier2-bad.spec.ts", "tests/e2e/tier2-good.spec.ts"], report["changed"]["test-all"])
+            self.assertEqual({"S-HARD-WAIT"}, {s["rule"] for s in report["smells"]})
+            self.assertEqual("FAIL", report["verdict"])
+            text = audit.render_markdown(report)
+            self.assertIn("레포 전체 테스트 2개", text)
+            script = str(SKILL_ROOT / "scripts" / "audit_tests.py")
+            result = subprocess.run(["python3", script, "--repo", str(root), "--all-tests", "--json"], capture_output=True, text=True)
+            self.assertEqual(1, result.returncode)
+            self.assertEqual("all-tests", json.loads(result.stdout)["mode"])
 
     def test_cli_accepts_changed_files_list(self):
         with tempfile.TemporaryDirectory() as raw:

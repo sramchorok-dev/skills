@@ -39,7 +39,9 @@ python3 skills/gardenstep-report-wiki/scripts/publish_report.py ./report.html \
 테스트 점검 (레포 디렉터리에서):
 
 ```bash
-python3 ~/.agents/skills/gardenstep-test-audit/scripts/audit_tests.py --repo . --base origin/dev
+python3 ~/.agents/skills/gardenstep-test-audit/scripts/audit_tests.py --repo . --base origin/dev            # PR·브랜치
+python3 ~/.agents/skills/gardenstep-test-audit/scripts/audit_tests.py --repo . --base origin/dev --working-tree  # 커밋 전
+python3 ~/.agents/skills/gardenstep-test-audit/scripts/audit_tests.py --repo . --all-tests                    # 기존 테스트 전체 스멜
 ```
 
 팀 테스트 규칙 정본: [skills/gardenstep-test-audit/references/testing-policy.md](skills/gardenstep-test-audit/references/testing-policy.md)

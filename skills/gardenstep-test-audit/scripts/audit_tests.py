@@ -120,17 +120,26 @@ def _classify_java(path: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def changed_files(root: Path, base: str, head: str = "HEAD") -> list[str]:
-    """`git diff --name-status base...head`에서 삭제를 뺀 'STATUS path' 목록."""
-    result = subprocess.run(
-        ["git", "diff", "--name-status", "--no-renames", f"{base}...{head}"],
-        cwd=root,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+def _git(root: Path, *args: str) -> str:
+    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=True).stdout
+
+
+def changed_files(root: Path, base: str, head: str | None = "HEAD") -> list[str]:
+    """삭제를 뺀 'STATUS path' 목록.
+
+    head가 있으면 `base...head`(merge-base 기준 커밋 비교). head가 None이면 **작업 트리 모드** —
+    merge-base(base, HEAD)와 현재 파일 상태를 비교하고, 아직 add하지 않은 새 파일도 'A'로 넣는다.
+    PR을 열기 전 커밋하지 않은 상태에서도 점검할 수 있다.
+    """
+    if head is None:
+        merge_base = _git(root, "merge-base", base, "HEAD").strip()
+        raw = _git(root, "diff", "--name-status", "--no-renames", merge_base)
+        untracked = [f"A {line.strip()}" for line in _git(root, "ls-files", "--others", "--exclude-standard").splitlines() if line.strip()]
+    else:
+        raw = _git(root, "diff", "--name-status", "--no-renames", f"{base}...{head}")
+        untracked = []
     entries: list[str] = []
-    for line in result.stdout.splitlines():
+    for line in raw.splitlines():
         if not line.strip():
             continue
         status, _, path = line.partition("\t")
@@ -138,7 +147,23 @@ def changed_files(root: Path, base: str, head: str = "HEAD") -> list[str]:
         if status == "D":
             continue
         entries.append(f"{status} {path.strip()}")
-    return entries
+    return entries + untracked
+
+
+_WALK_IGNORE = {".git", "node_modules", ".next", "build", "dist", "out", "test-results", "playwright-report", ".gradle", "__pycache__"}
+
+
+def all_test_files(root: Path, kind: str) -> list[str]:
+    """레포 안 테스트 파일 전부(픽스처 제외). diff 없이 기존 테스트 자산을 통째로 점검할 때 쓴다."""
+    found: list[str] = []
+    for path in root.rglob("*"):
+        if not path.is_file() or any(part in _WALK_IGNORE for part in path.relative_to(root).parts):
+            continue
+        rel = path.relative_to(root).as_posix()
+        category = classify_file(kind, rel)
+        if category.startswith("test-") and category != "test-fixture":
+            found.append(rel)
+    return sorted(found)
 
 
 def parse_changed(entries: list[str]) -> list[tuple[str, str]]:
@@ -358,7 +383,30 @@ _TS_LINE_RULES: list[tuple[re.Pattern[str], str, str, str]] = [
 
 _TS_SKIP_RE = re.compile(r"\b(?:test|it|describe)\.skip\(\s*([^,\n]*)(,|\))")
 _TS_TEST_START_RE = re.compile(r"^\s*(?:test|it)(?:\.(?:only|skip|fixme))?\(\s*(['\"`])((?:\\.|(?!\1).)*)\1", re.M)
-_TS_ASSERT_RE = re.compile(r"\bexpect\(|\bassert\.|\bassert\(|expectTypeOf\(|toMatchSnapshot")
+_TS_ASSERT_RE = re.compile(r"\bexpect(?:\.\w+)?\(|\bassert\.|\bassert\(|expectTypeOf\(|toMatchSnapshot")
+_TS_FUNC_DEF_RE = re.compile(r"(?:^|\n)\s*(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(|(?:^|\n)\s*(?:export\s+)?const\s+(\w+)\s*=\s*(?:async\s*)?(?:\([^)]*\)|\w+)\s*=>")
+_TS_HELPER_IMPORT_RE = re.compile(r"import\s*\{([^}]*)\}\s*from\s*['\"](\.{1,2}/[^'\"]*helpers/[^'\"]*)['\"]")
+
+
+def _asserting_helpers(root: Path, rel: str, text: str) -> set[str]:
+    """호출하면 단언이 일어나는 헬퍼 이름: 같은 파일의 함수 중 본문에 expect가 있는 것 + ./helpers/ 모듈에서 가져온 것."""
+    names: set[str] = set()
+    for match in _TS_FUNC_DEF_RE.finditer(text):
+        name = match.group(1) or match.group(2)
+        body = text[match.end(): _block_end(text, match.end())]
+        if name and _TS_ASSERT_RE.search(body):
+            names.add(name)
+    for match in _TS_HELPER_IMPORT_RE.finditer(text):
+        module = (root / rel).parent / match.group(2)
+        candidates = [module.with_suffix(".ts"), module / "index.ts", Path(str(module) + ".ts")]
+        helper_text = next((_read(c) for c in candidates if c.is_file()), "")
+        if not _TS_ASSERT_RE.search(helper_text):
+            continue
+        for raw in match.group(1).split(","):
+            name = raw.strip().split(" as ")[-1].strip()
+            if name:
+                names.add(name)
+    return names
 _KOREAN_RE = re.compile(r"[가-힣]")
 
 
@@ -424,9 +472,11 @@ def _imported_source_names(text: str) -> set[str]:
     return names
 
 
-def _scan_ts(kind: str, path: str, text: str) -> list[dict]:
+def _scan_ts(kind: str, path: str, text: str, root: Path | None = None) -> list[dict]:
     smells: list[dict] = []
     lines = text.splitlines()
+    helpers = _asserting_helpers(root, path, text) if root else set()
+    helper_call = re.compile(r"\b(?:" + "|".join(map(re.escape, sorted(helpers))) + r")\(") if helpers else None
     for number, line in enumerate(lines, 1):
         stripped = line.strip()
         if stripped.startswith("//") or stripped.startswith("*"):
@@ -455,7 +505,7 @@ def _scan_ts(kind: str, path: str, text: str) -> list[dict]:
         title = match.group(2)
         line_no = text.count("\n", 0, match.start()) + 1
         body = _ts_callback_body(text, match.end())
-        if not _TS_ASSERT_RE.search(body):
+        if not _TS_ASSERT_RE.search(body) and not (helper_call and helper_call.search(body)):
             smells.append(_smell(path, line_no, "S-NO-ASSERT", FAIL, match.group(0), "expect로 기대 결과를 단언한다 — 단언 없는 테스트는 통과해도 의미가 없다"))
         if not _KOREAN_RE.search(title) and len(title) < 24:
             smells.append(_smell(path, line_no, "S-TITLE", WARN, match.group(0), "제목을 '조건이면 기대 결과다' 한국어 문장으로 쓴다"))
@@ -492,16 +542,30 @@ def _scan_java(path: str, text: str) -> list[dict]:
     if "@SpringBootTest" in text and not re.search(r"extends\s+\w*(?:IntegrationTestSupport|PersistenceTestSupport)", text):
         line_no = next((i for i, l in enumerate(lines, 1) if "@SpringBootTest" in l), 1)
         smells.append(_smell(path, line_no, "S-CONTEXT-CACHE", WARN, lines[line_no - 1], "IntegrationTestSupport/PersistenceTestSupport를 상속해 컨텍스트 캐시를 공유한다 — 새 컨텍스트는 suite 시간을 늘린다"))
+    # 같은 파일의 비테스트 메서드 중 본문에 단언이 있는 것 — 호출하면 단언으로 친다 (예: expectBadRequest(...))
+    asserting_helpers: set[str] = set()
+    for method in _JAVA_METHOD_RE.finditer(text):
+        preceding = text[max(text.rfind("\n\n", 0, method.start()), text.rfind("}", 0, method.start()), 0): method.start()]
+        if _JAVA_TEST_RE.search(preceding):
+            continue
+        body = text[method.end() - 1: _block_end(text, method.end() - 1)]
+        if _JAVA_ASSERT_RE.search(body):
+            asserting_helpers.add(method.group(1))
+    helper_call = re.compile(r"\b(?:" + "|".join(map(re.escape, sorted(asserting_helpers))) + r")\(") if asserting_helpers else None
     for match in _JAVA_TEST_RE.finditer(text):
         window_start = match.end()
         method = _JAVA_METHOD_RE.search(text, window_start)
         if not method:
             continue
-        annotations = text[match.start(): method.start()]
+        # 어노테이션 블록: 직전 메서드 끝('}') 또는 빈 줄 이후부터 시그니처까지 — @DisplayName이 @Test 앞에 와도 잡는다
+        block_start = max(text.rfind("\n\n", 0, match.start()), text.rfind("}", 0, match.start()), 0)
+        annotations = text[block_start: method.start()]
         line_no = text.count("\n", 0, method.start()) + 1
         body = text[method.end() - 1: _block_end(text, method.end() - 1)]
-        has_assert = bool(_JAVA_ASSERT_RE.search(body))
+        has_assert = bool(_JAVA_ASSERT_RE.search(body)) or bool(helper_call and helper_call.search(body))
         has_mock = bool(_JAVA_MOCK_ONLY_RE.search(body))
+        if method.group(1) == "contextLoads":
+            continue  # Spring Boot 기본 스모크 — 컨텍스트 기동 자체가 단언
         if not has_assert and not has_mock:
             smells.append(_smell(path, line_no, "S-NO-ASSERT", FAIL, method.group(0), "assertThat으로 결과를 단언한다"))
         elif not has_assert and has_mock:
@@ -521,7 +585,7 @@ def scan_smells(kind: str, root: Path, test_files: list[str]) -> list[dict]:
             if rel.endswith(".java"):
                 smells.extend(_scan_java(rel, text))
         elif rel.endswith((".ts", ".tsx", ".js", ".mjs")):
-            smells.extend(_scan_ts(kind, rel, text))
+            smells.extend(_scan_ts(kind, rel, text, root))
     smells.sort(key=lambda s: (s["file"], s["line"], s["rule"]))
     return smells
 
@@ -568,14 +632,35 @@ def check_pr_body(body: str, root: Path) -> list[dict]:
 def audit(
     root: Path,
     base: str | None = None,
-    head: str = "HEAD",
+    head: str | None = "HEAD",
     changed: list[str] | None = None,
     pr_body: str | None = None,
     exempt: str | None = None,
     kind: str | None = None,
+    all_tests: bool = False,
 ) -> dict:
     root = Path(root).resolve()
     kind = kind or detect_repo_kind(root)
+    if all_tests:
+        # 전체 점검 모드: 필수 규칙(변경 ↔ 테스트 매핑)은 의미가 없으므로 스멜만 본다
+        test_files = all_test_files(root, kind)
+        classified = {"test-all": test_files}
+        rules: list[dict] = []
+        smells = scan_smells(kind, root, test_files)
+        pr_findings: list[dict] = []
+        report = {
+            "repo_kind": kind,
+            "mode": "all-tests",
+            "base": None,
+            "head": None,
+            "changed": classified,
+            "rules": rules,
+            "smells": smells,
+            "pr_body": pr_findings,
+            "exempt": "",
+        }
+        report["verdict"] = verdict(report)
+        return report
     if changed is None:
         if base is None:
             raise ValueError("base 또는 changed 중 하나는 필요하다")
@@ -597,8 +682,9 @@ def audit(
                 rule["fix"] = f"면제 적용({exempt}) — 후속 PR에서 보강: {rule['fix']}"
     report = {
         "repo_kind": kind,
+        "mode": "working-tree" if head is None else ("changed-list" if base is None else "diff"),
         "base": base,
-        "head": head,
+        "head": head or "작업 트리",
         "changed": classified,
         "rules": rules,
         "smells": smells,
@@ -624,7 +710,12 @@ def verdict(report: dict) -> str:
 def render_markdown(report: dict) -> str:
     out: list[str] = []
     out.append("## 🧪 테스트 점검 영수증 (gardenstep-test-audit)")
-    compare = f"{report.get('base')}...{report.get('head')}" if report.get("base") else "제공된 변경 목록"
+    if report.get("mode") == "all-tests":
+        compare = f"레포 전체 테스트 {len(report['changed'].get('test-all', []))}개 (스멜만)"
+    elif report.get("base"):
+        compare = f"{report.get('base')}...{report.get('head')}"
+    else:
+        compare = "제공된 변경 목록"
     out.append(f"- 레포: `{report['repo_kind']}` · 비교: `{compare}` · 판정: **{report['verdict']}**")
     if report.get("exempt"):
         out.append(f"- 면제: {report['exempt']}")
@@ -637,7 +728,9 @@ def render_markdown(report: dict) -> str:
         out.append(f"| {category} | {'<br>'.join(f'`{f}`' for f in files)} |")
     out.append("")
     out.append("### 필수 테스트 규칙")
-    if report["rules"]:
+    if report.get("mode") == "all-tests":
+        out.append("- 전체 점검 모드 — 변경 ↔ 테스트 매핑은 diff에서만 판정한다.")
+    elif report["rules"]:
         out.append("| 규칙 | 결과 | 근거 | 고치는 법 |")
         out.append("|---|---|---|---|")
         for rule in report["rules"]:
@@ -678,6 +771,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repo", type=Path, default=Path("."), help="레포 루트")
     parser.add_argument("--base", help="비교 기준 ref (예: origin/dev)")
     parser.add_argument("--head", default="HEAD")
+    parser.add_argument("--working-tree", action="store_true", help="커밋 전 상태 점검 — merge-base(base, HEAD)와 작업 트리(미추적 파일 포함)를 비교")
+    parser.add_argument("--all-tests", action="store_true", help="diff 없이 레포의 테스트 파일 전부를 스멜 검사 (필수 규칙은 생략)")
     parser.add_argument("--changed-files", type=Path, help="git 대신 사용할 'STATUS path' 목록 파일")
     parser.add_argument("--pr-body", type=Path, help="PR 본문 파일 — 테스트 영수증 검사")
     parser.add_argument("--exempt", help="면제 사유 — FAIL 규칙을 WARN으로 낮춘다 (test-exempt 라벨)")
@@ -689,11 +784,12 @@ def main(argv: list[str] | None = None) -> int:
     changed = None
     if args.changed_files:
         changed = [line for line in args.changed_files.read_text(encoding="utf-8").splitlines() if line.strip()]
-    elif not args.base:
-        parser.error("--base 또는 --changed-files 중 하나가 필요하다")
+    elif not args.base and not args.all_tests:
+        parser.error("--base, --changed-files, --all-tests 중 하나가 필요하다")
     pr_body = args.pr_body.read_text(encoding="utf-8") if args.pr_body else None
+    head = None if args.working_tree else args.head
     try:
-        report = audit(args.repo, base=args.base, head=args.head, changed=changed, pr_body=pr_body, exempt=args.exempt, kind=args.kind)
+        report = audit(args.repo, base=args.base, head=head, changed=changed, pr_body=pr_body, exempt=args.exempt, kind=args.kind, all_tests=args.all_tests)
     except subprocess.CalledProcessError as error:
         print(f"error: git diff 실패 — {error.stderr.strip()}", file=sys.stderr)
         return 2
