@@ -1,6 +1,6 @@
 ---
 name: gardenstep-test-audit
-description: Gardenstep/Chorok(gardenstep·gardenstep_admin·gardenstep-server·gardenstep-ai)의 PR·브랜치·diff에 담긴 테스트 코드가 팀 테스트 규칙을 지키는지 점검할 때 사용한다. "테스트 점검", "테스트 코드 리뷰", "이 PR 테스트 괜찮아?", "E2E 빠졌는지 봐줘", "머지 가능한지 테스트 기준으로", "테스트 규칙 확인", "test audit"처럼 테스트의 존재·품질·정책 준수를 묻거나, PR을 열기 전 자기 점검을 할 때, 주니어 PR의 테스트를 리뷰할 때 발동한다. 테스트를 실제로 실행한 증거는 chorok-completion-qa가 담당한다.
+description: Gardenstep/Chorok(gardenstep·gardenstep_admin·gardenstep-server·gardenstep-ai)의 PR·브랜치·diff에 담긴 테스트 코드가 팀 테스트 규칙을 지키는지 점검할 때 사용한다. "테스트 점검", "테스트 코드 리뷰", "이 PR 테스트 괜찮아?", "E2E 빠졌는지 봐줘", "머지 가능한지 테스트 기준으로", "테스트 규칙 확인", "test audit"처럼 테스트의 존재·품질·정책 준수를 묻거나, PR을 열기 전 자기 점검을 할 때, 다른 사람의 PR 테스트를 리뷰할 때 발동한다. 테스트를 실제로 실행한 증거는 chorok-completion-qa가 담당한다.
 compatibility: Python 3.10+, git. 워크스페이스 루트가 아니라 각 레포 디렉터리에서 실행
 ---
 
@@ -12,7 +12,7 @@ compatibility: Python 3.10+, git. 워크스페이스 루트가 아니라 각 레
 
 ## 언제 쓰나 / 언제 아닌가
 
-- 쓴다: PR 열기 전 자기 점검, 주니어 PR 리뷰의 첫 단계, "테스트 있어?"라는 질문, CI `test-gate` 실패 원인 해석.
+- 쓴다: PR 열기 전 자기 점검, PR 리뷰의 첫 단계, "테스트 있어?"라는 질문, CI `test-gate` 실패 원인 해석.
 - 안 쓴다: 테스트를 **실행**해 통과 수를 확인하는 일(`chorok-completion-qa`), 리뷰 코멘트 말투 다듬기(`chorok-code-review`, `review-like-me`), 테스트를 대신 써 주는 일(요청받으면 판정 후 별도 작업으로).
 
 ## 실행 순서
@@ -32,7 +32,7 @@ python3 "$SKILL_DIR/scripts/audit_tests.py" --repo . --base origin/dev --pr-body
 ```
 
 - 출력이 곧 영수증 초안이다: 변경 분류 → 필수 테스트 규칙(✅/❌/⚠️) → 스멜(파일:줄·규칙·고치는 법) → 기존 부채 → PR 본문 → 판정.
-- 스멜 판정은 **이 PR이 만지거나 새로 쓴 줄**에만 붙는다. 같은 파일의 손대지 않은 줄에 있는 스멜은 "기존 부채"로 개수만 보여주고 판정에 넣지 않는다. 주니어가 옛 파일에 테스트 하나를 더했다고 그 파일의 묵은 경고를 떠안지 않는다.
+- 스멜 판정은 **이 PR이 만지거나 새로 쓴 줄**에만 붙는다. 같은 파일의 손대지 않은 줄에 있는 스멜은 "기존 부채"로 개수만 보여주고 판정에 넣지 않는다. 옛 파일에 테스트 하나를 더한 PR이 그 파일의 묵은 경고를 떠안지 않는다.
 - 종료 코드 1 = FAIL. `--json`은 기계 판독용, `--exempt "<사유>"`는 `test-exempt` 라벨과 같은 효과.
 
 상황에 따라 모드를 고른다. PR이 아니어도 된다.
@@ -69,7 +69,7 @@ python3 "$SKILL_DIR/scripts/audit_tests.py" --repo . --base origin/dev --pr-body
 
 ### 5. 보고
 
-스크립트 출력 뒤에 아래를 붙인다. 주니어에게 전달하는 문구는 `chorok-code-review` 톤(질문형·왜를 설명·존댓말)으로 쓴다.
+스크립트 출력 뒤에 아래를 붙인다. 작성자에게 전달하는 문구는 `chorok-code-review` 톤(질문형·왜를 설명·존댓말)으로 쓴다.
 
 ```markdown
 ### 사람 눈 확인
@@ -81,7 +81,7 @@ python3 "$SKILL_DIR/scripts/audit_tests.py" --repo . --base origin/dev --pr-body
 ### 최종 판정: PASS | WARN | FAIL
 - 고칠 것 (FAIL): <파일:줄 — 무엇을 — 어떻게, 정책 §n>
 - 확인할 것 (WARN): <항목 — 리뷰어 판단 근거>
-- 주니어에게: <2~4문장. 왜 이 테스트가 필요한지 한 줄, 고치는 방향 한 줄>
+- 작성자에게: <2~4문장. 왜 이 테스트가 필요한지 한 줄, 고치는 방향 한 줄>
 ```
 
 ## 합리화 표

@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "gardenstep 레포 feat/coupon 브랜치의 PR이 우리 테스트 규칙 기준으로 머지 가능한지 점검해줘. base는 origin/dev.",
-      "expected_output": "scripts/audit_tests.py를 --base origin/dev --pr-body로 실행하고, 규칙 표·스멜 표·PR 본문 결과를 담은 영수증과 PASS/WARN/FAIL 판정, FAIL이면 파일·줄·고치는 법을 주니어에게 전달하는 질문형 문구로 제시. 테스트를 실제로 실행하지는 않음",
+      "expected_output": "scripts/audit_tests.py를 --base origin/dev --pr-body로 실행하고, 규칙 표·스멜 표·PR 본문 결과를 담은 영수증과 PASS/WARN/FAIL 판정, FAIL이면 파일·줄·고치는 법을 작성자에게 전달하는 질문형 문구로 제시. 테스트를 실제로 실행하지는 않음",
       "files": ["tests/e2e/tier2-coupon.spec.ts", "tests/e2e/tier2-coupon.unit.spec.ts", "PR_BODY.md"]
     },
     {
