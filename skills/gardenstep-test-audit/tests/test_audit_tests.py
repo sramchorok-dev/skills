@@ -608,6 +608,29 @@ class PrBodyTest(unittest.TestCase):
             self.assertIn("tier2-missing.unit.spec.ts", missing[0]["message"])
             self.assertIn("PR-MUTATION-MISSING", rules)
 
+    def test_receipt_check_ignores_body_outside_section_and_accepts_basenames(self):
+        body = """## How
+`tier2-nowhere.spec.ts`를 참고했다. `lib/tier2/missing.ts`도 언급만 한다.
+
+## 🧪 테스트 영수증
+- E2E: `tier2-coupon.spec.ts` — "쿠폰 코드를 적용하면 할인된 합계가 표시된다"
+- 뮤테이션 확인: `coupon.ts`의 percent를 바꾸자 실패
+- 실행: `npx playwright test tests/e2e/tier2-coupon.spec.ts` → 2 passed
+
+## Out of scope
+`tier2-other.spec.ts`는 다음 PR.
+"""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            fe_repo(root)
+            write(root, "tests/e2e/tier2-coupon.spec.ts", GOOD_BROWSER_SPEC)
+            write(root, "lib/tier2/coupon.ts", "export const x = 1;")
+            write(root, "node_modules/pkg/tier2-ghost.spec.ts", "")
+            self.assertEqual([], audit.check_pr_body(body, root))
+            ghost = body.replace("`coupon.ts`", "`tier2-ghost.spec.ts`")
+            findings = audit.check_pr_body(ghost, root)
+            self.assertEqual(["PR-RECEIPT-PATH"], [f["rule"] for f in findings])
+
     def test_complete_receipt_has_no_findings(self):
         body = """## 🧪 테스트 영수증
 - 바뀐 사용자 동작: 쿠폰 적용

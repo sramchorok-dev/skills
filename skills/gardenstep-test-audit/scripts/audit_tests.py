@@ -637,20 +637,37 @@ _MUTATION_LINE_RE = re.compile(r"^\s*[-*]\s*뮤테이션[^:：]*[:：]\s*(\S.*)?
 _EXEMPT_LINE_RE = re.compile(r"^\s*[-*]\s*면제[^:：]*[:：]\s*(\S.*)?$", re.M)
 
 
+def _find_by_basename(root: Path, name: str) -> bool:
+    for path in root.rglob(name):
+        if path.is_file() and not any(part in _WALK_IGNORE for part in path.relative_to(root).parts):
+            return True
+    return False
+
+
 def check_pr_body(body: str, root: Path) -> list[dict]:
     findings: list[dict] = []
     if not _RECEIPT_HEADING_RE.search(body):
         findings.append({"rule": "PR-RECEIPT-MISSING", "level": FAIL, "message": "PR 본문에 '🧪 테스트 영수증' 섹션이 없다 — assets/pr-test-receipt.md 양식을 채운다"})
         return findings
+    # 영수증 섹션 안의 백틱만 검사한다 — What/How 본문에서 언급한 파일명까지 경로로 요구하지 않는다
+    heading = _RECEIPT_HEADING_RE.search(body)
+    section_start = body.rfind("\n", 0, heading.start()) + 1 if heading else 0
+    next_heading = re.search(r"^#{1,6}\s", body[heading.end():], re.M) if heading else None
+    section_end = heading.end() + next_heading.start() if next_heading else len(body)
+    section = body[section_start:section_end]
     seen: set[str] = set()
-    for span in _RECEIPT_SPAN_RE.finditer(body):
+    for span in _RECEIPT_SPAN_RE.finditer(section):
         for token in _RECEIPT_TOKEN_RE.finditer(span.group(1)):
             rel = token.group(1)
             if "*" in rel or rel in seen:
                 continue
             seen.add(rel)
-            if not (root / rel).is_file():
-                findings.append({"rule": "PR-RECEIPT-PATH", "level": FAIL, "message": f"영수증에 적힌 테스트 파일이 레포에 없다: {rel}"})
+            if (root / rel).is_file():
+                continue
+            # 경로 없이 파일명만 적었으면 레포 안에서 같은 이름을 찾아본다
+            if "/" not in rel and _find_by_basename(root, rel):
+                continue
+            findings.append({"rule": "PR-RECEIPT-PATH", "level": FAIL, "message": f"영수증에 적힌 테스트 파일이 레포에 없다: {rel}"})
     exempt = _EXEMPT_LINE_RE.search(body)
     exempt_reason = (exempt.group(1) or "").strip() if exempt else ""
     mutation = _MUTATION_LINE_RE.search(body)
