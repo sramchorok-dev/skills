@@ -239,14 +239,18 @@ def required_rules(kind: str, root: Path, changed: list[tuple[str, str]]) -> lis
             new_pages = [p for p in added if re.match(r"app/.*/page\.tsx$", p)]
             if new_pages:
                 flag_off_touched = any(p.endswith("tier2-flag-off.spec.ts") for _, p in changed)
+                # page.tsx가 isTier2Enabled/notFound로 시작하면 플래그 뒤 라우트가 확실하다 → 정책 §3 필수(FAIL)
+                behind_flag = [p for p in new_pages if re.search(r"isTier2Enabled|notFound\(", _read(root / p))]
                 rules.append(
                     _rule(
                         "FE-FLAG-OFF",
                         "새 라우트는 flag OFF 404 케이스를 tier2-flag-off.spec.ts에 추가한다",
-                        WARN,
+                        FAIL if behind_flag else WARN,
                         flag_off_touched,
-                        new_pages,
-                        "플래그 뒤 라우트면 tests/e2e/tier2-flag-off.spec.ts에 경로를 추가하고, 아니면 PR 본문에 사유를 적는다",
+                        behind_flag or new_pages,
+                        "tests/e2e/tier2-flag-off.spec.ts의 경로 목록에 새 라우트를 추가한다"
+                        if behind_flag
+                        else "플래그 뒤 라우트면 tests/e2e/tier2-flag-off.spec.ts에 경로를 추가하고, 아니면 PR 본문에 사유를 적는다",
                     )
                 )
         if kind == "admin" and ui and browser:
@@ -403,6 +407,23 @@ def _ts_callback_body(text: str, start: int) -> str:
     return text[open_idx: _block_end(text, open_idx, open_idx)]
 
 
+_TS_IMPORT_RE = re.compile(r"import\s*\{([^}]*)\}\s*from\s*['\"](\.\.?/[^'\"]*)['\"]")
+
+
+def _imported_source_names(text: str) -> set[str]:
+    """테스트 밖(소스)에서 가져온 식별자. `from '../../lib/...'`처럼 상위로 올라가는 상대 import만 센다."""
+    names: set[str] = set()
+    for match in _TS_IMPORT_RE.finditer(text):
+        target = match.group(2)
+        if not target.startswith("../") or "/helpers/" in target:
+            continue
+        for raw in match.group(1).split(","):
+            name = raw.strip().split(" as ")[-1].strip()
+            if name and not name.startswith("type "):
+                names.add(name)
+    return names
+
+
 def _scan_ts(kind: str, path: str, text: str) -> list[dict]:
     smells: list[dict] = []
     lines = text.splitlines()
@@ -419,6 +440,14 @@ def _scan_ts(kind: str, path: str, text: str) -> list[dict]:
             has_reason = closer == "," and ("'" in line[match.end():] or '"' in line[match.end():])
             if not (is_condition and has_reason):
                 smells.append(_smell(path, number, "S-SKIP", FAIL, line, "skip은 `test.skip(조건, '이슈번호 + 사유')` 환경 가드만 허용 — 그 외는 지우거나 고친다"))
+    source_names = _imported_source_names(text)
+    if source_names:
+        expected_call = re.compile(
+            r"\.(?:toBe|toEqual|toStrictEqual|toHaveText|toMatchObject)\(\s*(?:await\s+)?(" + "|".join(map(re.escape, sorted(source_names))) + r")\("
+        )
+        for number, line in enumerate(lines, 1):
+            if expected_call.search(line) and not any(sm["line"] == number and sm["rule"] == "S-SELF-REFERENCE" for sm in smells):
+                smells.append(_smell(path, number, "S-SELF-REFERENCE", WARN, line, "기대값을 구현 함수로 계산하지 않는다 — 스펙·손계산 값을 직접 적는다"))
     if path.endswith(".unit.spec.ts") and re.search(r"\{\s*page\s*[,}]|\bpage\.", text):
         line_no = next((i for i, l in enumerate(lines, 1) if re.search(r"\{\s*page\s*[,}]|\bpage\.", l)), 1)
         smells.append(_smell(path, line_no, "S-UNIT-USES-PAGE", FAIL, lines[line_no - 1], "unit.spec은 브라우저를 쓰지 않는다 — page 픽스처를 빼거나 브라우저 spec으로 옮긴다"))

@@ -189,6 +189,26 @@ class RequiredRulesFeTest(unittest.TestCase):
             self.assertFalse(rule["satisfied"])
             self.assertEqual("WARN", rule["level"])
 
+    def test_new_page_behind_flag_without_flag_off_case_fails(self):
+        flagged = "import { notFound } from 'next/navigation';\nexport default function Page() { if (!isTier2Enabled()) notFound(); return null; }\n"
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            fe_repo(root)
+            write(root, "app/coupon/page.tsx", flagged)
+            write(root, "tests/e2e/tier2-coupon.spec.ts", GOOD_BROWSER_SPEC)
+            report = self.run_audit(
+                root, ["A app/coupon/page.tsx", "A tests/e2e/tier2-coupon.spec.ts"]
+            )
+            rule = next(r for r in report["rules"] if r["id"] == "FE-FLAG-OFF")
+            self.assertEqual("FAIL", rule["level"])
+            self.assertEqual("FAIL", report["verdict"])
+            write(root, "tests/e2e/tier2-flag-off.spec.ts", "for (const p of ['/shop', '/coupon']) {}")
+            report = self.run_audit(
+                root, ["A app/coupon/page.tsx", "A tests/e2e/tier2-coupon.spec.ts", "M tests/e2e/tier2-flag-off.spec.ts"]
+            )
+            rule = next(r for r in report["rules"] if r["id"] == "FE-FLAG-OFF")
+            self.assertTrue(rule["satisfied"])
+
     def test_browser_spec_without_failure_path_warns(self):
         happy_only = """import { test, expect } from '@playwright/test';
 test('쿠폰 코드를 적용하면 할인된 합계가 표시된다', async ({ page }) => {
@@ -404,6 +424,21 @@ class SmellTsTest(unittest.TestCase):
         )
         smells = self.smells_for("fe", "tests/e2e/tier2-x.unit.spec.ts", text)
         self.assertIn("S-SELF-REFERENCE", self.rules(smells))
+
+    def test_expected_value_computed_by_source_function_warns(self):
+        text = (
+            "import { test, expect } from '@playwright/test';\n"
+            "import { applyCoupon } from '../../lib/tier2/coupon';\n"
+            "import { seedCart } from './helpers/tier2';\n"
+            "test('같은 값을 돌려준다', () => {\n"
+            "  const r = applyCoupon(10000, 'A');\n"
+            "  expect(r.total).toBe(applyCoupon(10000, 'A').total);\n"
+            "  expect(seedCart([])).toEqual(seedCart([]));\n"
+            "});\n"
+        )
+        smells = self.smells_for("fe", "tests/e2e/tier2-x.unit.spec.ts", text)
+        hits = [s for s in smells if s["rule"] == "S-SELF-REFERENCE"]
+        self.assertEqual([6, 7], sorted(s["line"] for s in hits))
 
     def test_vague_title_warns_and_korean_sentence_passes(self):
         vague = "import { test, expect } from '@playwright/test';\ntest('coupon works', () => { expect(1).toBe(2); });\n"
