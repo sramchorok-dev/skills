@@ -4,6 +4,11 @@
       "name": "gardenstep-report-wiki",
       "category": "reporting",
       "description": "Gardenstep HTML 보고서의 공개 DEV Wiki 검증·게시·readback"
+    },
+    {
+      "name": "gardenstep-test-audit",
+      "category": "quality",
+      "description": "Gardenstep PR의 테스트 코드가 팀 테스트 규칙(E2E 필수·스멜 금지·영수증)을 지키는지 점검·판정"
     }
   ]
 }

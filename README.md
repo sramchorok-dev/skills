@@ -7,13 +7,14 @@
 | 스킬 | 분야 | 용도 |
 |---|---|---|
 | [`gardenstep-report-wiki`](skills/gardenstep-report-wiki/) | 보고·공유 | Gardenstep HTML 보고서 공개 DEV Wiki 게시 |
+| [`gardenstep-test-audit`](skills/gardenstep-test-audit/) | 품질 | PR 테스트 코드의 팀 규칙 준수 점검·판정 (E2E 필수, 스멜, 영수증) |
 
 ## 설치
 
 ```bash
 git clone https://github.com/sramchorok-dev/skills.git
 cd skills
-python3 scripts/install.py gardenstep-report-wiki
+python3 scripts/install.py gardenstep-report-wiki gardenstep-test-audit
 ```
 
 설치기는 `~/.agents/skills/`에 저장소 스킬을 symlink한다. `~/.agents/sync.py`가 있으면 dry-run 후 Claude Code·Codex·OpenCode로 동기화한다.
@@ -34,6 +35,14 @@ python3 skills/gardenstep-report-wiki/scripts/publish_report.py ./report.html \
 ```
 
 공개 Wiki: <https://cdn-dev.gardenstep.ai/report-wiki/index.html>
+
+테스트 점검 (레포 디렉터리에서):
+
+```bash
+python3 ~/.agents/skills/gardenstep-test-audit/scripts/audit_tests.py --repo . --base origin/dev
+```
+
+팀 테스트 규칙 정본: [skills/gardenstep-test-audit/references/testing-policy.md](skills/gardenstep-test-audit/references/testing-policy.md)
 
 ## 새 스킬 추가
 
