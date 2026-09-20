@@ -644,6 +644,39 @@ class PrBodyTest(unittest.TestCase):
             write(root, "tests/e2e/tier2-coupon.spec.ts", GOOD_BROWSER_SPEC)
             self.assertEqual([], audit.check_pr_body(body, root))
 
+    def test_concise_verification_accepts_plain_language_and_checks_paths(self):
+        body = """쿠폰 적용 전에는 합계가 갱신되지 않았다. 이제 할인된 합계를 표시한다.
+
+## 검증
+- 쿠폰 적용 → 할인된 합계: Playwright E2E(API 대역) 2/2 — `tests/e2e/tier2-coupon.spec.ts`
+- 결함 감지: 할인율을 바꾸자 위 테스트 실패; 원복 후 통과.
+- 미확인: 실제 DEV API 연결.
+"""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            fe_repo(root)
+            write(root, "tests/e2e/tier2-coupon.spec.ts", GOOD_BROWSER_SPEC)
+            self.assertEqual([], audit.check_pr_body(body, root))
+            bad_body = body.replace("tier2-coupon.spec.ts", "tier2-missing.spec.ts")
+            self.assertIn("PR-RECEIPT-PATH", {f["rule"] for f in audit.check_pr_body(bad_body, root)})
+
+    def test_docs_only_pr_needs_verification_but_not_mutation(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            fe_repo(root)
+            report = audit.audit(root, changed=["M README.md"], pr_body="## 검증\n- README 링크 확인 완료.")
+            self.assertEqual("PASS", report["verdict"])
+            self.assertEqual([], report["pr_body"])
+
+    def test_empty_or_unfilled_verification_fails(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            fe_repo(root)
+            empty = audit.check_pr_body("## 검증\n<!-- 작성 안내 -->", root, require_mutation=False)
+            self.assertIn("PR-RECEIPT-EMPTY", {f["rule"] for f in empty})
+            template = audit.check_pr_body("## 검증\n- <조건 → 기대 동작>: <결과>\n- 결함 감지: <무엇을 바꿨는지>", root)
+            self.assertIn("PR-RECEIPT-PLACEHOLDER", {f["rule"] for f in template})
+
     def test_exemption_downgrades_failures(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -705,7 +738,7 @@ class GitAndCliTest(unittest.TestCase):
                 text=True,
             )
             self.assertEqual(1, bad.returncode)
-            self.assertIn("테스트 점검 영수증", bad.stdout)
+            self.assertIn("테스트 점검 결과", bad.stdout)
             self.assertIn("FAIL", bad.stdout)
             tolerant = subprocess.run(
                 ["python3", script, "--repo", str(root), "--base", "dev", "--no-fail"],
@@ -833,14 +866,14 @@ class GitAndCliTest(unittest.TestCase):
 
 
 class RenderTest(unittest.TestCase):
-    def test_markdown_receipt_sections(self):
+    def test_markdown_result_sections(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             fe_repo(root)
             write(root, "containers/coupon/CouponClient.tsx", "export default () => null;")
             report = audit.audit(root, changed=["M containers/coupon/CouponClient.tsx"])
             text = audit.render_markdown(report)
-            for heading in ("테스트 점검 영수증", "변경 분류", "필수 테스트 규칙", "테스트 코드 스멜"):
+            for heading in ("테스트 점검 결과", "변경 분류", "필수 테스트 규칙", "테스트 코드 스멜"):
                 self.assertIn(heading, text)
             self.assertIn("FE-E2E", text)
 

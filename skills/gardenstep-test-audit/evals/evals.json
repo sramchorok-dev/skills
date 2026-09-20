@@ -4,13 +4,13 @@
     {
       "id": 1,
       "prompt": "gardenstep 레포 feat/coupon 브랜치의 PR이 우리 테스트 규칙 기준으로 머지 가능한지 점검해줘. base는 origin/dev.",
-      "expected_output": "scripts/audit_tests.py를 --base origin/dev --pr-body로 실행하고, 규칙 표·스멜 표·PR 본문 결과를 담은 영수증과 PASS/WARN/FAIL 판정, FAIL이면 파일·줄·고치는 법을 작성자에게 전달하는 질문형 문구로 제시. 테스트를 실제로 실행하지는 않음",
+      "expected_output": "scripts/audit_tests.py를 --base origin/dev --pr-body로 실행하고, 규칙 표·스멜 표·PR 본문 결과를 담은 점검 결과와 PASS/WARN/FAIL 판정, FAIL이면 파일·줄·고치는 법을 작성자에게 전달하는 질문형 문구로 제시. 테스트를 실제로 실행하지는 않음",
       "files": ["tests/e2e/tier2-coupon.spec.ts", "tests/e2e/tier2-coupon.unit.spec.ts", "PR_BODY.md"]
     },
     {
       "id": 2,
       "prompt": "이 PR은 안내 문구만 바꾼 거라 테스트 없이 머지하고 싶어. 규칙상 되나?",
-      "expected_output": "스크립트 실행 결과 FE-E2E FAIL을 보여주되, 정책 §6 면제 절차(test-exempt 라벨 + 영수증 면제 줄 사유 + 리드 승인)를 안내. 면제 없이 통과시키지 않고, 문구가 검증 대상이면 toContainText 갱신을 권함",
+      "expected_output": "스크립트 실행 결과 FE-E2E FAIL을 보여주되, 정책 §6 면제 절차(test-exempt 라벨 + PR 검증의 면제 줄 사유 + 리드 승인)를 안내. 면제 없이 통과시키지 않고, 문구가 검증 대상이면 toContainText 갱신을 권함",
       "files": ["containers/shop/ShopClient.tsx"]
     },
     {
@@ -28,7 +28,7 @@
     {
       "id": 4,
       "prompt": "테스트가 다 초록인데 뭘 더 봐야 해? 빨리 머지하자.",
-      "expected_output": "초록은 실행 증거일 뿐 정책 충족이 아님을 말하고, 영수증·실패 경로·뮤테이션 확인·mock 경계·기대값 출처를 점검. 결제·금액·재고 변경이면 리드 승인 필수를 명시. 판정을 생략하지 않음",
+      "expected_output": "초록은 실행 증거일 뿐 정책 충족이 아님을 말하고, PR 검증·실패 경로·결함 감지·mock 경계·기대값 출처를 점검. 결제·금액·재고 변경이면 리드 승인 필수를 명시. 판정을 생략하지 않음",
       "files": []
     }
   ]

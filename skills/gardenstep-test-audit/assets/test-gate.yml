@@ -1,11 +1,11 @@
 # 각 레포 .github/workflows/cicd.yml의 jobs: 아래에 그대로 붙인다.
 # PR에서만 돈다. 공개 저장소 sramchorok-dev/skills를 체크아웃하므로 토큰이 필요 없다.
-# 판정 FAIL이면 잡이 빨간 X가 되고, 영수증 전문이 PR의 Checks → Summary에 남는다.
+# 판정 FAIL이면 잡이 빨간 X가 되고, 점검 결과가 PR의 Checks → Summary에 남는다.
 #
 # 무료 플랜에서는 이 잡을 "required check"로 잠글 수 없다(references/testing-policy.md §7).
 # 팀 규칙: 빨간 X 상태로 머지하지 않는다. 위반 머지는 dev에서 revert.
 #
-# 면제: PR에 `test-exempt` 라벨을 붙이면 FAIL 규칙이 WARN으로 내려간다. 스멜과 영수증 검사는 그대로 돈다.
+# 면제: PR에 `test-exempt` 라벨을 붙이면 FAIL 규칙이 WARN으로 내려간다. 스멜과 검증 섹션 검사는 그대로 돈다.
 
   test-gate:
     if: ${{ github.event_name == 'pull_request' }}

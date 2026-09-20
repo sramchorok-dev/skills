@@ -2,7 +2,7 @@
 """Gardenstep 테스트 정책 점검기.
 
 PR diff를 읽어 (1) 변경 파일을 분류하고 (2) 변경 유형별 필수 테스트가 함께 왔는지 확인하고
-(3) 변경된 테스트 파일에서 테스트 스멜을 찾고 (4) PR 본문의 테스트 영수증을 검사한다.
+(3) 변경된 테스트 파일에서 테스트 스멜을 찾고 (4) PR 본문의 검증 결과를 검사한다.
 
 표준 라이브러리만 사용한다. 정책 정본: ../references/testing-policy.md
 
@@ -627,13 +627,13 @@ def scan_smells(kind: str, root: Path, test_files: list[str]) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# PR 본문 영수증
+# PR 본문 검증 결과
 # ---------------------------------------------------------------------------
 
-_RECEIPT_HEADING_RE = re.compile(r"테스트\s*영수증")
+_RECEIPT_HEADING_RE = re.compile(r"^#{1,6}[ \t]*(?:🧪[ \t]*)?(?:검증(?:[ \t]*결과)?|테스트[ \t]*영수증)[ \t]*$", re.M)
 _RECEIPT_SPAN_RE = re.compile(r"`([^`\n]+)`")
 _RECEIPT_TOKEN_RE = re.compile(r"(?<![\w/])([\w./()\[\]-]+\.(?:spec\.ts|test\.tsx?|java))\b")
-_MUTATION_LINE_RE = re.compile(r"^\s*[-*]\s*뮤테이션[^:：]*[:：]\s*(\S.*)?$", re.M)
+_MUTATION_LINE_RE = re.compile(r"^\s*[-*]\s*(?:결함\s*감지|뮤테이션(?:\s*확인)?)[^:：]*[:：]\s*(\S.*)?$", re.M)
 _EXEMPT_LINE_RE = re.compile(r"^\s*[-*]\s*면제[^:：]*[:：]\s*(\S.*)?$", re.M)
 
 
@@ -644,17 +644,23 @@ def _find_by_basename(root: Path, name: str) -> bool:
     return False
 
 
-def check_pr_body(body: str, root: Path) -> list[dict]:
+def check_pr_body(body: str, root: Path, require_mutation: bool = True) -> list[dict]:
     findings: list[dict] = []
     if not _RECEIPT_HEADING_RE.search(body):
-        findings.append({"rule": "PR-RECEIPT-MISSING", "level": FAIL, "message": "PR 본문에 '🧪 테스트 영수증' 섹션이 없다 — assets/pr-test-receipt.md 양식을 채운다"})
+        findings.append({"rule": "PR-RECEIPT-MISSING", "level": FAIL, "message": "PR 본문에 '## 검증' 섹션이 없다 — assets/pr-test-receipt.md 양식을 채운다"})
         return findings
-    # 영수증 섹션 안의 백틱만 검사한다 — What/How 본문에서 언급한 파일명까지 경로로 요구하지 않는다
+    # 검증 섹션 안의 백틱만 검사한다 — 본문 다른 곳의 파일명까지 경로로 요구하지 않는다
     heading = _RECEIPT_HEADING_RE.search(body)
     section_start = body.rfind("\n", 0, heading.start()) + 1 if heading else 0
     next_heading = re.search(r"^#{1,6}\s", body[heading.end():], re.M) if heading else None
     section_end = heading.end() + next_heading.start() if next_heading else len(body)
     section = body[section_start:section_end]
+    visible = re.sub(r"<!--.*?-->", "", section, flags=re.S)
+    content_lines = [line.strip() for line in visible.splitlines() if line.strip() and not line.lstrip().startswith("#")]
+    if not content_lines:
+        findings.append({"rule": "PR-RECEIPT-EMPTY", "level": FAIL, "message": "검증 섹션이 비어 있다 — 확인한 동작·환경·결과를 한 줄로 적는다"})
+    elif any(re.match(r"^[-*]\s*(?:<[^>]+>|[^:：\n]+[:：]\s*<[^>]+>)", line) for line in content_lines):
+        findings.append({"rule": "PR-RECEIPT-PLACEHOLDER", "level": FAIL, "message": "검증 섹션에 템플릿 빈칸이 남아 있다 — 실제 결과로 채우거나 줄을 지운다"})
     seen: set[str] = set()
     for span in _RECEIPT_SPAN_RE.finditer(section):
         for token in _RECEIPT_TOKEN_RE.finditer(span.group(1)):
@@ -667,13 +673,13 @@ def check_pr_body(body: str, root: Path) -> list[dict]:
             # 경로 없이 파일명만 적었으면 레포 안에서 같은 이름을 찾아본다
             if "/" not in rel and _find_by_basename(root, rel):
                 continue
-            findings.append({"rule": "PR-RECEIPT-PATH", "level": FAIL, "message": f"영수증에 적힌 테스트 파일이 레포에 없다: {rel}"})
+            findings.append({"rule": "PR-RECEIPT-PATH", "level": FAIL, "message": f"검증에 적힌 테스트 파일이 레포에 없다: {rel}"})
     exempt = _EXEMPT_LINE_RE.search(body)
     exempt_reason = (exempt.group(1) or "").strip() if exempt else ""
     mutation = _MUTATION_LINE_RE.search(body)
     mutation_text = (mutation.group(1) or "").strip() if mutation else ""
-    if not mutation_text and not (exempt_reason and exempt_reason != "없음"):
-        findings.append({"rule": "PR-MUTATION-MISSING", "level": WARN, "message": "뮤테이션 확인 줄이 비어 있다 — 구현 한 곳을 일부러 망가뜨려 어떤 테스트가 떨어졌는지 한 줄 적는다"})
+    if require_mutation and not mutation_text and not (exempt_reason and exempt_reason != "없음"):
+        findings.append({"rule": "PR-MUTATION-MISSING", "level": WARN, "message": "결함 감지 결과가 없다 — 구현 한 곳을 일부러 망가뜨려 어떤 테스트가 떨어졌는지 한 줄 적는다"})
     return findings
 
 
@@ -743,7 +749,11 @@ def audit(
                 legacy.append(smell)
     else:
         smells = all_smells
-    pr_findings = check_pr_body(pr_body, root) if pr_body is not None else []
+    requires_mutation = any(
+        classify_file(kind, path).startswith(("source-", "test-")) or classify_file(kind, path) == "schema"
+        for _, path in parsed
+    )
+    pr_findings = check_pr_body(pr_body, root, require_mutation=requires_mutation) if pr_body is not None else []
     if exempt:
         for rule in rules:
             if not rule["satisfied"] and rule["level"] == FAIL:
@@ -779,7 +789,7 @@ def verdict(report: dict) -> str:
 
 def render_markdown(report: dict) -> str:
     out: list[str] = []
-    out.append("## 🧪 테스트 점검 영수증 (gardenstep-test-audit)")
+    out.append("## 테스트 점검 결과 (gardenstep-test-audit)")
     if report.get("mode") == "all-tests":
         compare = f"레포 전체 테스트 {len(report['changed'].get('test-all', []))}개 (스멜만)"
     elif report.get("base"):
@@ -853,7 +863,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--working-tree", action="store_true", help="커밋 전 상태 점검 — merge-base(base, HEAD)와 작업 트리(미추적 파일 포함)를 비교")
     parser.add_argument("--all-tests", action="store_true", help="diff 없이 레포의 테스트 파일 전부를 스멜 검사 (필수 규칙은 생략)")
     parser.add_argument("--changed-files", type=Path, help="git 대신 사용할 'STATUS path' 목록 파일")
-    parser.add_argument("--pr-body", type=Path, help="PR 본문 파일 — 테스트 영수증 검사")
+    parser.add_argument("--pr-body", type=Path, help="PR 본문 파일 — 검증 결과 검사")
     parser.add_argument("--exempt", help="면제 사유 — FAIL 규칙을 WARN으로 낮춘다 (test-exempt 라벨)")
     parser.add_argument("--kind", choices=["fe", "admin", "server"], help="레포 종류 강제 지정")
     parser.add_argument("--json", action="store_true", help="JSON 출력")
