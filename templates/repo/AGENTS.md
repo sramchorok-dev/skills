@@ -6,6 +6,7 @@
 - 가끔 필요한 긴 절차는 스킬로, 매번 막아야 하는 것은 hook으로 옮긴다 (sramchorok-dev/skills 플러그인).
 - 비밀값·호스트명·계정 정보는 적지 않는다.
 - CLAUDE.md는 만들지 않는다. Claude Code는 CLAUDE.md가 없을 때 AGENTS.md를 읽는다 (skills docs/adr/0001).
+- Next.js 16.3+ 레포: `next dev`가 파일 끝에 `<!-- BEGIN:nextjs-agent-rules -->` 블록을 붙인다. 이 블록을 함께 커밋한다 (없으면 매번 트리가 더러워지고, AGENTS.md가 없으면 CLAUDE.md까지 생긴다).
 -->
 
 <한 줄: 이 레포가 무엇이고 누가 쓰는가>

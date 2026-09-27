@@ -155,4 +155,6 @@ Ready 상태 PR에 Claude가 결함 리뷰와 "바뀐 동작 ↔ 테스트" 매�
 
 **규칙을 바꾸고 싶다.** 이 저장소에 PR을 연다. hook·스킬을 바꾸면 `.claude-plugin/plugin.json`의 `version`을 올린다(올리지 않으면 팀원 캐시가 갱신되지 않는다). 결정이 ADR 기준에 맞으면 ADR을 추가한다.
 
+**`next dev`를 켰더니 AGENTS.md가 바뀌었다.** Next.js 16.3+는 AGENTS.md 끝에 자기 안내 블록(`nextjs-agent-rules`)을 유지한다. FE·admin AGENTS.md에는 이미 커밋돼 있으니, 바뀌었다면 Next.js가 블록 문구를 갱신한 것이다 — 그 변경을 함께 커밋한다.
+
 **AGENTS.md를 에이전트가 안 읽는 것 같다.** 세션 시작 안내에 경고가 있는지 본다. 작업 디렉터리 상위에 CLAUDE.md가 있으면 `/config` → Project instructions를 `claude-md-and-agents-md`로 바꾼다.
