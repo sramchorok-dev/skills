@@ -51,6 +51,41 @@ class RepositoryToolsTest(unittest.TestCase):
             self.fixture_repo(root)
             self.assertEqual([], validator.validate(root))
 
+    def plugin_fixture(self, root: Path) -> None:
+        (root / ".claude-plugin").mkdir()
+        (root / ".claude-plugin" / "plugin.json").write_text(
+            json.dumps({"name": "team", "version": "0.1.0"}), encoding="utf-8")
+        (root / ".claude-plugin" / "marketplace.json").write_text(
+            json.dumps({"name": "m", "owner": {"name": "o"}, "plugins": [{"name": "team", "source": "./"}]}),
+            encoding="utf-8")
+        (root / "hooks").mkdir()
+        (root / "hooks" / "guard.py").write_text("print()\n", encoding="utf-8")
+        (root / "hooks" / "hooks.json").write_text(json.dumps({"hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [
+            {"type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard.py\""}]}]}}), encoding="utf-8")
+
+    def test_valid_plugin_passes(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self.fixture_repo(root)
+            self.plugin_fixture(root)
+            self.assertEqual([], validator.validate(root))
+
+    def test_plugin_hook_pointing_to_missing_script_fails(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self.fixture_repo(root)
+            self.plugin_fixture(root)
+            (root / "hooks" / "guard.py").unlink()
+            self.assertTrue(any("missing hooks/guard.py" in e for e in validator.validate(root)))
+
+    def test_plugin_without_semver_fails(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self.fixture_repo(root)
+            self.plugin_fixture(root)
+            (root / ".claude-plugin" / "plugin.json").write_text('{"name": "team"}', encoding="utf-8")
+            self.assertTrue(any("semver" in e for e in validator.validate(root)))
+
     def test_catalog_drift_fails(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

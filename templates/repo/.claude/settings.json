@@ -1,0 +1,10 @@
+{
+  "extraKnownMarketplaces": {
+    "sramchorok": {
+      "source": { "source": "github", "repo": "sramchorok-dev/skills" }
+    }
+  },
+  "enabledPlugins": {
+    "gardenstep-team@sramchorok": true
+  }
+}

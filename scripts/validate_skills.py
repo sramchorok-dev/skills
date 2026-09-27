@@ -67,6 +67,54 @@ def validate_eval_file(path: Path, skill_name: str) -> list[str]:
     return errors
 
 
+SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
+
+
+def _load_json(path: Path, errors: list[str]) -> dict | None:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        errors.append(f"{path}: invalid JSON: {error}")
+        return None
+
+
+def validate_plugin(root: Path) -> list[str]:
+    """저장소 루트가 Claude Code 플러그인·마켓플레이스일 때 manifest와 hook 배선을 검사한다."""
+    errors: list[str] = []
+    plugin_dir = root / ".claude-plugin"
+    if not plugin_dir.is_dir():
+        return errors
+    plugin = _load_json(plugin_dir / "plugin.json", errors) or {}
+    name = plugin.get("name", "")
+    if not NAME_RE.fullmatch(name):
+        errors.append(".claude-plugin/plugin.json: name must use kebab-case")
+    if not SEMVER_RE.fullmatch(str(plugin.get("version", ""))):
+        errors.append(".claude-plugin/plugin.json: version must be semver (bump it on every plugin change)")
+    marketplace = _load_json(plugin_dir / "marketplace.json", errors) or {}
+    entries = [e for e in marketplace.get("plugins", []) if isinstance(e, dict)]
+    if not any(e.get("name") == name and e.get("source") in ("./", ".") for e in entries):
+        errors.append(".claude-plugin/marketplace.json: must list the root plugin with source \"./\"")
+    hooks_file = root / "hooks" / "hooks.json"
+    if hooks_file.is_file():
+        manifest = _load_json(hooks_file, errors) or {}
+        for event, groups in manifest.get("hooks", {}).items():
+            for group in groups:
+                for hook in group.get("hooks", []):
+                    command = hook.get("command", "")
+                    for rel in re.findall(r"\$\{CLAUDE_PLUGIN_ROOT\}/([^\"\s]+)", command):
+                        if not (root / rel).is_file():
+                            errors.append(f"hooks/hooks.json: {event} hook points to missing {rel}")
+    for command_file in sorted((root / "commands").glob("*.md")) if (root / "commands").is_dir() else []:
+        try:
+            meta = parse_frontmatter(command_file)
+        except ValidationError as error:
+            errors.append(str(error))
+            continue
+        if not meta.get("description"):
+            errors.append(f"{command_file}: description is required")
+    return errors
+
+
 def validate(root: Path) -> list[str]:
     errors: list[str] = []
     skills_root = root / "skills"
@@ -128,6 +176,7 @@ def validate(root: Path) -> list[str]:
                 py_compile.compile(str(path), doraise=True)
             except py_compile.PyCompileError as error:
                 errors.append(f"{path}: Python compile failed: {error.msg}")
+    errors.extend(validate_plugin(root))
     return errors
 
 

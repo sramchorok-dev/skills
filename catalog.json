@@ -1,6 +1,16 @@
 {
   "skills": [
     {
+      "name": "gardenstep-change-log",
+      "category": "quality",
+      "description": "PR마다 docs/changes에 날짜·무엇·왜 변경기록을 만들고 검사하며 ADR 필요 여부를 판정"
+    },
+    {
+      "name": "gardenstep-completion-qa",
+      "category": "quality",
+      "description": "코드·스키마·CI·배포 변경의 완료 판정 — 변경 동작별 TC·빌드·E2E·라이브 증거 매핑"
+    },
+    {
       "name": "gardenstep-report-wiki",
       "category": "reporting",
       "description": "Gardenstep HTML 보고서의 공개 DEV Wiki 검증·게시·readback"
