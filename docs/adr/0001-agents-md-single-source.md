@@ -28,4 +28,5 @@ Claude Code는 v2.1.277부터 CLAUDE.md가 없으면 AGENTS.md를 프로젝트 �
 
 - 좋아지는 것: 도구와 관계없이 같은 지침. 레포를 clone하면 규칙이 따라온다.
 - 감수하는 것: Claude Code v2.1.281 이상이 필요하다. 작업 디렉터리 **상위**에 CLAUDE.md가 있으면 AGENTS.md가 무시된다 — 이 경우 `/config` → Project instructions를 `claude-md-and-agents-md`로 둔다. 플러그인 SessionStart hook이 이 상황을 감지해 알려준다.
+- Next.js 16.3+ 레포(FE·admin)는 `next dev`가 AGENTS.md 끝에 Next.js 관리 블록을 붙이고, AGENTS.md가 없으면 CLAUDE.md(`@AGENTS.md`)까지 만든다. 블록을 포함한 AGENTS.md를 커밋해 두면 CLAUDE.md는 생기지 않는다(`writeAgentFiles()` 실행으로 확인, 2026-09-28).
 - 다시 볼 조건: Claude Code의 AGENTS.md 지원 방식이 바뀔 때.
