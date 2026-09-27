@@ -1,0 +1,39 @@
+# 각 레포 .github/workflows/cicd.yml의 jobs: 아래에 붙이거나 이 파일 그대로 둔다.
+# PR마다 docs/changes/ 변경기록이 있는지, '무엇'·'왜'가 채워졌는지, 마이그레이션이면 rollback이 적혔는지 본다.
+# 무료 플랜에서는 required check로 잠글 수 없다 — 팀 규칙: 빨간 X 상태로 머지하지 않는다.
+# 릴리스 동기화 PR(main 대상, release/* 브랜치)은 검사하지 않는다.
+name: change-gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  change-gate:
+    if: ${{ github.base_ref != 'main' && !startsWith(github.head_ref, 'release/') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Checkout shared skills (public)
+        uses: actions/checkout@v4
+        with:
+          repository: sramchorok-dev/skills
+          ref: main
+          path: .skills
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check change record
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -o pipefail
+          python3 .skills/skills/gardenstep-change-log/scripts/change_record.py check \
+            --repo . --branch "$HEAD_REF" --base "origin/${BASE_REF}" | tee -a "$GITHUB_STEP_SUMMARY"

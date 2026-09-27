@@ -1,0 +1,23 @@
+{
+  "skill_name": "gardenstep-completion-qa",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "gardenstep의 Tier2 정원도면 geometry에서 특정 seed가 1㎡를 넘는 버그를 수정하고 DEV 배포까지 끝내줘.",
+      "expected_output": "실패 seed를 먼저 고정한 TC, 경계·다중 seed 행렬, Playwright UI/모바일/콘솔 E2E, lint·build·전체 관련 테스트, PR/CI/DEV 라이브 검증을 증거와 함께 보고하고 production/backend 미배포 범위를 분리한다.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "gardenstep-server의 Tier2 견적 반올림 규칙을 바꿨다. 개발 완료 처리해줘.",
+      "expected_output": "견적 public seam과 독립 기대값 TC, 경계·overflow·BOM/결제 정합성, targeted JUnit 뒤 전체 test/build, 소비자 계약 영향과 필요한 FE E2E를 판정하며 누락된 게이트가 있으면 NOT COMPLETE로 남긴다.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "gardenstep과 gardenstep-server 사이 주문 응답 필드를 변경하고 두 PR을 배포해줘.",
+      "expected_output": "producer/consumer 계약과 배포 순서를 명시하고 양쪽 TC·build, 실제 주문 E2E, 두 PR의 CI/미해결 리뷰, 대상 환경의 deploy SHA·컨테이너·HTTP/browser smoke까지 각각 검증한다.",
+      "files": []
+    }
+  ]
+}

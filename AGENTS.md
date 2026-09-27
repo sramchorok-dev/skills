@@ -11,6 +11,8 @@
 - 비밀값, 개인 식별 정보, 고객 원문, 로컬 `.env`를 커밋하지 않는다.
 - 외부 게시·전송·삭제는 사용자의 현재 대화 지시 범위에서만 수행한다.
 - 기존 스킬 변경 전 관련 테스트와 `evals/evals.json`을 읽는다.
+- 저장소 루트는 Claude Code 플러그인 `gardenstep-team`이기도 하다. hook 정책·버전 규칙은 CONTRIBUTING의 「플러그인」과 `docs/adr/0002`를 따른다.
+- 팀 결정은 `docs/adr/`에 쓰되 README의 기준(셋 중 둘 이상)을 충족할 때만.
 
 ## 완료 조건
 
@@ -19,5 +21,7 @@
 3. 변경 스킬의 `tests/` 실행
 4. `git diff --check`
 5. README·catalog 일치
+6. 플러그인 변경 시 `plugin.json` version 증가, 가능하면 `claude plugin validate .`
+7. PR마다 `docs/changes/` 변경기록
 
 배포 기능이 있는 스킬은 dry-run/검증과 실제 배포를 분리하고, 대상 계정·환경·공개 readback을 확인한다.

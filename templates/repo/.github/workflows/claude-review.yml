@@ -1,0 +1,54 @@
+# AI 코드 리뷰 (시범 — skills docs/adr/0004). Draft PR은 건너뛰고, ready 상태가 되면 돈다.
+# 인증: CLAUDE_CODE_OAUTH_TOKEN(구독, `claude setup-token`) 또는 ANTHROPIC_API_KEY. 토큰은 발급자 구독 한도를 쓴다.
+# AI 리뷰는 머지를 막지 않는다. 사람 리뷰(JD 승인)를 대신하지 않는다.
+name: claude-review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      # 1) 결함 리뷰 — 공식 code-review 플러그인. 레포의 AGENTS.md를 팀 규칙으로 읽는다.
+      - name: Code review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
+          plugins: "code-review@claude-code-plugins"
+          prompt: "/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+          claude_args: >-
+            --allowedTools "mcp__github_inline_comment__create_inline_comment"
+            --append-system-prompt "리뷰 코멘트는 한국어 존댓말로 쓴다. 정확성·보안·요구사항에 영향이 있는 것만 보고하고 스타일 지적은 하지 않는다."
+
+      # 2) 테스트 충분성 — 바뀐 동작마다 대응 테스트가 있는지 매핑표 한 장
+      - name: Test coverage map
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            PR ${{ github.repository }}#${{ github.event.pull_request.number }}의 diff를 읽고, 바뀐 사용자 동작·계산을 행으로 하는
+            표를 만든다: | 바뀐 동작 | 대응 테스트(파일:이름) | 판정(있음/부족/없음) | 비고 |.
+            기준은 팀 테스트 규칙 v1(https://github.com/sramchorok-dev/skills/blob/main/skills/gardenstep-test-audit/references/testing-policy.md) §3 매트릭스다.
+            mock 호출 검증만 있는 테스트는 '부족'으로 본다. 표와 '빠진 테스트' 목록만 한국어로 써서
+            `gh pr comment ${{ github.event.pull_request.number }} --body-file <파일>`로 한 번 올린다. 코드는 고치지 않는다.
+          claude_args: >-
+            --max-turns 15
+            --allowedTools "Read,Glob,Grep,Write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*)"

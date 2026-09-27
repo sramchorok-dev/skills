@@ -1,6 +1,6 @@
 ---
 name: gardenstep-test-audit
-description: Gardenstep/Chorok(gardenstep·gardenstep_admin·gardenstep-server·gardenstep-ai)의 PR·브랜치·diff에 담긴 테스트 코드가 팀 테스트 규칙을 지키는지 점검할 때 사용한다. "테스트 점검", "테스트 코드 리뷰", "이 PR 테스트 괜찮아?", "E2E 빠졌는지 봐줘", "머지 가능한지 테스트 기준으로", "테스트 규칙 확인", "test audit"처럼 테스트의 존재·품질·정책 준수를 묻거나, PR을 열기 전 자기 점검을 할 때, 다른 사람의 PR 테스트를 리뷰할 때 발동한다. 테스트를 실제로 실행한 증거는 chorok-completion-qa가 담당한다.
+description: Gardenstep/Chorok(gardenstep·gardenstep_admin·gardenstep-server·gardenstep-ai)의 PR·브랜치·diff에 담긴 테스트 코드가 팀 테스트 규칙을 지키는지 점검할 때 사용한다. "테스트 점검", "테스트 코드 리뷰", "이 PR 테스트 괜찮아?", "E2E 빠졌는지 봐줘", "머지 가능한지 테스트 기준으로", "테스트 규칙 확인", "test audit"처럼 테스트의 존재·품질·정책 준수를 묻거나, PR을 열기 전 자기 점검을 할 때, 다른 사람의 PR 테스트를 리뷰할 때 발동한다. 테스트를 실제로 실행한 증거는 gardenstep-completion-qa가 담당한다.
 compatibility: Python 3.10+, git. 워크스페이스 루트가 아니라 각 레포 디렉터리에서 실행
 ---
 
@@ -13,7 +13,7 @@ compatibility: Python 3.10+, git. 워크스페이스 루트가 아니라 각 레
 ## 언제 쓰나 / 언제 아닌가
 
 - 쓴다: PR 열기 전 자기 점검, PR 리뷰의 첫 단계, "테스트 있어?"라는 질문, CI `test-gate` 실패 원인 해석.
-- 안 쓴다: 테스트를 **실행**해 통과 수를 확인하는 일(`chorok-completion-qa`), 리뷰 코멘트 말투 다듬기(`chorok-code-review`, `review-like-me`), 테스트를 대신 써 주는 일(요청받으면 판정 후 별도 작업으로).
+- 안 쓴다: 테스트를 **실행**해 통과 수를 확인하는 일(`gardenstep-completion-qa`), 리뷰 코멘트 말투 다듬기(`chorok-code-review`, `review-like-me`), 테스트를 대신 써 주는 일(요청받으면 판정 후 별도 작업으로).
 
 ## 실행 순서
 
@@ -107,7 +107,7 @@ python3 "$SKILL_DIR/scripts/audit_tests.py" --repo . --base origin/dev --pr-body
 
 ## 하지 않는 것
 
-- 테스트를 실행해 통과 수를 세지 않는다 — `chorok-completion-qa`.
+- 테스트를 실행해 통과 수를 세지 않는다 — `gardenstep-completion-qa`.
 - 요청 없이 테스트 파일을 고치지 않는다. 판정과 고치는 법까지만.
 - 정책 문서를 판정 중에 고치지 않는다. 규칙이 틀렸다고 판단되면 판정은 현행대로 하고 개정 제안을 따로 남긴다.
 

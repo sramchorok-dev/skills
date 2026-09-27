@@ -1,0 +1,12 @@
+{
+  "name": "sramchorok",
+  "owner": { "name": "sramchorok-dev" },
+  "metadata": { "description": "sramchorok-dev 팀 공용 Claude Code 플러그인" },
+  "plugins": [
+    {
+      "name": "gardenstep-team",
+      "source": "./",
+      "description": "Gardenstep 팀 에이전트 규칙: 가드레일 hook, PR 게이트(/ship-pr), 테스트 점검·변경기록·완료 QA 스킬"
+    }
+  ]
+}

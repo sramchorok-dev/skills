@@ -21,6 +21,14 @@ compatibility: 선택 사항
 
 본문은 실행 순서, 입력, 안전 경계, 검증, 완료 보고를 중심으로 작성한다. 환경별 긴 설명과 명령 목록은 `references/`로 분리한다.
 
+## 플러그인 (hook·명령)
+
+- hook 스크립트는 `hooks/`, 배선은 `hooks/hooks.json`, 슬래시 명령은 `commands/*.md`(frontmatter `description` 필수).
+- 정책(docs/adr/0002): 편집 도구는 보호 파일만 `deny`, Bash는 `deny` 없이 `ask`. hook은 예외가 나도 작업을 막지 않는다(exit 0).
+- 동작 테스트는 `tests/test_hooks.py`에 JSON stdin → 결정 출력 형태로 추가한다. 막아야 할 것과 막지 말아야 할 것을 함께 쓴다.
+- 플러그인에 들어가는 것을 바꾸면 `.claude-plugin/plugin.json`의 `version`을 올린다. 올리지 않으면 팀원 캐시가 갱신되지 않는다.
+- 이 저장소는 공개이며 팀원 머신에서 실행된다. 호스트명·계정·비밀값을 넣지 않는다.
+
 ## 검증
 
 ```bash

@@ -47,5 +47,5 @@
 | 항목 | 값 |
 |---|---|
 | DEV 실계정 스모크 | 워크스페이스 `tests/dev-account-e2e/run.sh` — CI 밖, 머지·배포 후 수동. 계정 정본 `docs/ops/dev-qa-accounts.md` |
-| 실행 증거 게이트 | `chorok-completion-qa` 스킬 — TC·통합/빌드·E2E·라이브 스모크 실행 결과를 영수증으로. 이 스킬(test-audit)은 **코드 자체**를 본다 |
+| 실행 증거 게이트 | `gardenstep-completion-qa` 스킬 — TC·통합/빌드·E2E·라이브 스모크 실행 결과를 영수증으로. 이 스킬(test-audit)은 **코드 자체**를 본다 |
 | 계약 변경 | 상태 어휘(ADR-0002), 이벤트 이중 발행(ADR-0006), 카탈로그 계약(ADR-0007)은 `chorok/docs/adr/`. 양쪽 레포 테스트 + 배포 순서 |
