@@ -1,7 +1,7 @@
 ---
 date: 2026-09-27
 branch: feat/team-agent-plugin
-pr:
+pr: 2
 type: feat
 risk: normal
 rollback: revert
