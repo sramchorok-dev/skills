@@ -1,7 +1,7 @@
 ---
 date: 2026-09-28
 branch: docs/nextjs-agents-md
-pr:
+pr: 3
 type: docs
 risk: normal
 rollback: revert
