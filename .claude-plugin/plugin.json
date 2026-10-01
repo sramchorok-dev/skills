@@ -1,6 +1,6 @@
 {
   "name": "gardenstep-team",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Gardenstep 팀 에이전트 규칙: 가드레일 hook, PR 게이트(/ship-pr), 테스트 점검·변경기록·완료 QA 스킬",
   "author": { "name": "sramchorok-dev" },
   "homepage": "https://github.com/sramchorok-dev/skills",

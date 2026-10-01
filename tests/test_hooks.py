@@ -16,6 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 HOOKS = ROOT / "hooks"
 sys.path.insert(0, str(HOOKS))
 
+# 테스트는 실제 ~/.claude에 로그를 쓰지 않고 네트워크로 최신 버전을 묻지 않는다
+_LOG_DIR = tempfile.mkdtemp(prefix="gardenstep-team-test-")
+os.environ["GARDENSTEP_TEAM_LOG"] = os.path.join(_LOG_DIR, "decisions.jsonl")
+os.environ["GARDENSTEP_TEAM_NO_UPDATE_CHECK"] = "1"
+
 
 def load(name: str):
     spec = importlib.util.spec_from_file_location(name, HOOKS / f"{name}.py")
@@ -144,13 +149,116 @@ class GuardBashTest(unittest.TestCase):
         self.assertEqual(decision["permissionDecisionReason"], decision["additionalContext"])
 
     def test_every_bash_rule_asks_never_denies(self):
-        for pattern, _ in guard_bash.RULES:
-            self.assertIsNotNone(pattern.pattern)
+        ids = [rule_id for rule_id, _, _ in guard_bash.RULES]
+        self.assertEqual(len(ids), len(set(ids)), "rule IDs must be unique")
         source = (HOOKS / "guard_bash.py").read_text(encoding="utf-8")
         self.assertNotIn('"deny"', source)
 
     def test_safe_command_produces_no_output(self):
         self.assertIsNone(run_hook("guard_bash.py", {"tool_input": {"command": "ls -la"}, "cwd": "/"}))
+
+
+    def test_skip_ci_asks(self):
+        self.assertAsks('git commit -m "fix: 문구 정정 [skip ci]"', "[skip ci]")
+        self.assertAsks('gh pr create --title "fix: 이미지 패치 [CI SKIP]" --body x', "[skip ci]")
+        self.assertQuiet('git commit -m "fix: skip cinema banner"')
+
+    def test_rules_carry_stable_ids(self):
+        ids = [rule_id for rule_id, _ in guard_bash.risky_rules("git push origin main && rm -rf build", None)]
+        self.assertEqual(["push-protected", "rm-rf"], ids)
+
+
+class DecisionLogTest(unittest.TestCase):
+    def setUp(self):
+        self.log = Path(os.environ["GARDENSTEP_TEAM_LOG"])
+        self.log.unlink(missing_ok=True)
+
+    def entries(self) -> list[dict]:
+        if not self.log.exists():
+            return []
+        return [json.loads(line) for line in self.log.read_text(encoding="utf-8").splitlines()]
+
+    def test_ask_is_logged_with_rule_ids_but_without_command_text(self):
+        run_hook("guard_bash.py", {"tool_input": {"command": "git push origin main --secret-token=abc"}, "cwd": "/"})
+        [entry] = self.entries()
+        self.assertEqual(("guard_bash", "ask"), (entry["hook"], entry["decision"]))
+        self.assertIn("push-protected", entry["rules"])
+        self.assertNotIn("secret-token", self.log.read_text(encoding="utf-8"))
+        self.assertEqual({"ts", "hook", "decision", "rules", "repo"}, set(entry), "로그에는 규칙 ID·레포·시각만 남긴다")
+
+    def test_post_bash_logs_approved_runs_only_for_risky_commands(self):
+        run_hook("post_bash.py", {"tool_input": {"command": "ls -la"}, "cwd": "/"})
+        self.assertEqual([], self.entries())
+        run_hook("post_bash.py", {"tool_input": {"command": "gh pr merge 12 --squash"}, "cwd": "/"})
+        [entry] = self.entries()
+        self.assertEqual(("post_bash", "ran", ["pr-merge"]), (entry["hook"], entry["decision"], entry["rules"]))
+
+    def test_edit_deny_is_logged(self):
+        run_hook("guard_edit.py", {"tool_input": {"file_path": "/tmp/x/.env"}, "cwd": "/tmp"})
+        [entry] = self.entries()
+        self.assertEqual(("guard_edit", "deny", ["edit-secret"]), (entry["hook"], entry["decision"], entry["rules"]))
+
+    def test_disabled_logging_writes_nothing(self):
+        run_hook("guard_bash.py", {"tool_input": {"command": "rm -rf build"}, "cwd": "/"},
+                 env={"GARDENSTEP_TEAM_LOG_DISABLED": "1"})
+        self.assertEqual([], self.entries())
+
+
+class HookStatsTest(unittest.TestCase):
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location("hook_stats", ROOT / "scripts" / "hook_stats.py")
+        self.stats = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.stats)
+
+    def test_always_approved_rule_is_flagged_as_tuning_candidate(self):
+        rows = ([{"decision": "ask", "rules": ["remote-shell"], "repo": "gardenstep-server"}] * 12
+                + [{"decision": "ran", "rules": ["remote-shell"], "repo": "gardenstep-server"}] * 12
+                + [{"decision": "ask", "rules": ["pr-merge"], "repo": "gardenstep"}] * 12
+                + [{"decision": "ran", "rules": ["pr-merge"], "repo": "gardenstep"}] * 3
+                + [{"decision": "deny", "rules": ["edit-applied-changeset"], "repo": "gardenstep-server"}])
+        summary = self.stats.summarize(rows)
+        by_rule = {row["rule"]: row for row in summary["ask_rules"]}
+        self.assertTrue(by_rule["remote-shell"]["tuning_candidate"])
+        self.assertFalse(by_rule["pr-merge"]["tuning_candidate"])
+        self.assertEqual(0.25, by_rule["pr-merge"]["approval_rate"])
+        self.assertEqual({"edit-applied-changeset": 1}, summary["deny"])
+        self.assertIn("조정 후보", self.stats.render(summary, 30))
+
+    def test_reads_only_the_requested_window(self):
+        with tempfile.TemporaryDirectory() as raw:
+            log = Path(raw) / "decisions.jsonl"
+            log.write_text("\n".join([
+                json.dumps({"ts": "2020-01-01T00:00:00+00:00", "decision": "ask", "rules": ["old"]}),
+                json.dumps({"ts": "2999-01-01T00:00:00+00:00", "decision": "ask", "rules": ["new"]}),
+                "not json",
+            ]), encoding="utf-8")
+            from datetime import datetime, timezone
+            rows = self.stats.load([log], datetime(2026, 1, 1, tzinfo=timezone.utc))
+            self.assertEqual([["new"]], [r["rules"] for r in rows])
+
+
+class UpdateNoticeTest(unittest.TestCase):
+    def test_session_shows_update_notice_when_main_has_newer_version(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = team_repo(raw)
+            latest = Path(raw) / "plugin.json"
+            latest.write_text(json.dumps({"version": "9.9.9"}), encoding="utf-8")
+            env = {"GARDENSTEP_TEAM_NO_UPDATE_CHECK": "0", "GARDENSTEP_TEAM_LATEST_URL": latest.as_uri(),
+                   "GARDENSTEP_TEAM_LOG": str(Path(raw) / "state" / "decisions.jsonl")}
+            out = run_hook("session_context.py", {"cwd": str(root), "source": "startup"}, env)["text"]
+            self.assertIn("새 버전 v9.9.9", out)
+            self.assertIn("claude plugin update gardenstep-team@sramchorok", out)
+
+    def test_no_notice_when_up_to_date(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = team_repo(raw)
+            current = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]
+            latest = Path(raw) / "plugin.json"
+            latest.write_text(json.dumps({"version": current}), encoding="utf-8")
+            env = {"GARDENSTEP_TEAM_NO_UPDATE_CHECK": "0", "GARDENSTEP_TEAM_LATEST_URL": latest.as_uri(),
+                   "GARDENSTEP_TEAM_LOG": str(Path(raw) / "state" / "decisions.jsonl")}
+            out = run_hook("session_context.py", {"cwd": str(root), "source": "startup"}, env)["text"]
+            self.assertNotIn("새 버전", out)
 
 
 class PrGateTest(unittest.TestCase):

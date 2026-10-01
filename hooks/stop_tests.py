@@ -48,6 +48,7 @@ def decide(data: dict) -> dict | None:
     branch = c.current_branch(root) or "detached"
     if already_nudged(data.get("session_id") or "", f"{root}:{branch}"):
         return None
+    c.log_decision("stop_tests", "block", ["stop-no-tests"], root)
     shown = ", ".join(sources[:5]) + (f" 외 {len(sources) - 5}개" if len(sources) > 5 else "")
     return {
         "decision": "block",

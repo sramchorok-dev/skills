@@ -18,6 +18,7 @@ def load(name: str, path: Path):
 
 validator = load("validate_skills", ROOT / "scripts" / "validate_skills.py")
 installer = load("install_skills", ROOT / "scripts" / "install.py")
+version_check = load("check_plugin_version", ROOT / "scripts" / "check_plugin_version.py")
 
 
 class RepositoryToolsTest(unittest.TestCase):
@@ -112,6 +113,49 @@ class RepositoryToolsTest(unittest.TestCase):
             (target / "example-skill").mkdir(parents=True)
             with self.assertRaisesRegex(installer.InstallError, "not a symlink"):
                 installer.install_skill(root / "skills", target, "example-skill")
+
+
+class PluginVersionCheckTest(unittest.TestCase):
+    def repo(self, raw: str) -> Path:
+        import subprocess
+        root = Path(raw)
+        run = lambda *a: subprocess.run(["git", "-C", str(root), *a], check=True, capture_output=True)
+        run("init", "-q", "-b", "main")
+        run("config", "user.email", "t@example.com")
+        run("config", "user.name", "t")
+        (root / ".claude-plugin").mkdir()
+        (root / ".claude-plugin" / "plugin.json").write_text('{"name": "team", "version": "0.1.0"}', encoding="utf-8")
+        (root / "hooks").mkdir()
+        (root / "hooks" / "guard.py").write_text("print(1)\n", encoding="utf-8")
+        (root / "docs").mkdir()
+        (root / "docs" / "guide.md").write_text("a\n", encoding="utf-8")
+        run("add", "."); run("commit", "-q", "-m", "init"); run("checkout", "-q", "-b", "feat")
+        self.run_git = run
+        return root
+
+    def test_hook_change_without_bump_fails(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = self.repo(raw)
+            (root / "hooks" / "guard.py").write_text("print(2)\n", encoding="utf-8")
+            self.run_git("commit", "-qam", "change hook")
+            problems = version_check.check(root, "main")
+            self.assertEqual(1, len(problems))
+            self.assertIn("hooks/guard.py", problems[0])
+
+    def test_hook_change_with_bump_passes(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = self.repo(raw)
+            (root / "hooks" / "guard.py").write_text("print(2)\n", encoding="utf-8")
+            (root / ".claude-plugin" / "plugin.json").write_text('{"name": "team", "version": "0.2.0"}', encoding="utf-8")
+            self.run_git("commit", "-qam", "change hook and bump")
+            self.assertEqual([], version_check.check(root, "main"))
+
+    def test_docs_only_change_needs_no_bump(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = self.repo(raw)
+            (root / "docs" / "guide.md").write_text("b\n", encoding="utf-8")
+            self.run_git("commit", "-qam", "docs")
+            self.assertEqual([], version_check.check(root, "main"))
 
 
 if __name__ == "__main__":

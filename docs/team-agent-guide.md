@@ -76,6 +76,7 @@ flowchart TD
 | 이미 dev에 있는 Liquibase changeset 편집 | **차단** → 새 changeset을 만들라고 안내 | checksum이 바뀌면 배포가 멈춘다 |
 | `main`·`release/*` push, force push, 원격 브랜치 삭제 | **확인** | 운영 배포로 이어진다 |
 | `gh pr merge`, `gh workflow run`, `gh run rerun` | **확인** | 머지·배포·롤백은 사람이 판단한다 |
+| 커밋 메시지·PR 제목에 `[skip ci]` | **확인** | PR CI·빌드·DEV 배포가 모두 건너뛰어진다. CI 초록 없이 머지되는 경로 |
 | `mysql … UPDATE/DELETE/DDL`, SQL 파일 실행, Liquibase 직접 실행 | **확인** | 운영 DB는 조회만, 쓰기는 JD가 SQL을 승인한 경우만 |
 | `ssh`, AWS 변경, `rm -rf`, `git reset --hard`, `--no-verify`, `sudo` 등 | **확인** | 되돌리기 어렵다 |
 | `gh pr create` 때 변경기록·`## 검증`·테스트 점검 미비 | **확인** + 빠진 항목 목록 | PR 전에 채우는 것이 싸다 |
@@ -84,6 +85,16 @@ flowchart TD
 
 - **확인(ask)** 은 프롬프트에 사유가 뜬다. 사유를 읽고 맞으면 승인, 아니면 거절한다. 습관적으로 승인하지 않는다.
 - hook은 Claude를 거치는 작업만 본다. 터미널에서 직접 하는 작업은 CI와 팀 규칙이 지킨다.
+
+### 결정 로그와 통계
+
+hook이 확인·차단·알림을 낼 때마다 각자 컴퓨터의 `~/.claude/gardenstep-team/decisions.jsonl`에 한 줄을 남긴다.
+**명령·파일 내용은 기록하지 않고** 규칙 ID·레포 이름·시각만 남긴다. 어디에도 전송하지 않는다.
+
+- `/hook-stats` — 최근 30일 규칙별 확인 요청 수, 실제 실행(승인) 수, 승인률, 차단·알림 횟수를 보여준다.
+- 확인 요청이 10번 이상인데 90% 이상 승인되는 규칙은 "조정 후보"로 표시된다 — 오탐일 가능성이 높다.
+- 팀 집계는 각자 `/hook-stats`의 `--json` 출력을 JD에게 공유해 모은다. 로그 파일 자체는 올리지 않는다.
+- 기록을 끄려면 환경 변수 `GARDENSTEP_TEAM_LOG_DISABLED=1`.
 
 ## 5. 테스트 규칙
 
@@ -153,7 +164,9 @@ Ready 상태 PR에 Claude가 결함 리뷰와 "바뀐 동작 ↔ 테스트" 매�
 
 **꼭 해야 하는 작업인데 편집이 차단됐다.** 차단된 파일(비밀값·운영 설정·적용된 changeset)은 사람이 직접 다루거나 JD에게 요청한다. hook을 끄지 않는다.
 
-**규칙을 바꾸고 싶다.** 이 저장소에 PR을 연다. hook·스킬을 바꾸면 `.claude-plugin/plugin.json`의 `version`을 올린다(올리지 않으면 팀원 캐시가 갱신되지 않는다). 결정이 ADR 기준에 맞으면 ADR을 추가한다.
+**플러그인을 최신으로 받으려면?** 세션 시작 안내에 `⬆ 새 버전`이 보이면 `claude plugin update gardenstep-team@sramchorok` 후 Claude Code를 재시작한다. `/plugin` → Marketplaces → `sramchorok`에서 auto-update를 켜 두면 자동으로 받는다. 버전 확인은 하루 한 번만 한다.
+
+**규칙을 바꾸고 싶다.** 이 저장소에 PR을 연다. hook·스킬·명령을 바꾸면 `.claude-plugin/plugin.json`의 `version`을 올린다 — 올리지 않으면 팀원 캐시가 갱신되지 않고, CI(`check_plugin_version.py`)가 실패한다. 결정이 ADR 기준에 맞으면 ADR을 추가한다.
 
 **`next dev`를 켰더니 AGENTS.md가 바뀌었다.** Next.js 16.3+는 AGENTS.md 끝에 자기 안내 블록(`nextjs-agent-rules`)을 유지한다. FE·admin AGENTS.md에는 이미 커밋돼 있으니, 바뀌었다면 Next.js가 블록 문구를 갱신한 것이다 — 그 변경을 함께 커밋한다.
 

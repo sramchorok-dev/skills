@@ -6,13 +6,46 @@ hook은 실패해도 작업을 막지 않는다: 예상 못 한 예외는 조용
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 TEAM_REMOTE_RE = re.compile(r"sramchorok-dev/")
 PROTECTED_BRANCH_RE = re.compile(r"^(main|master|release/.+)$")
+
+
+LOG_MAX_BYTES = 2 * 1024 * 1024
+
+
+def log_path() -> Path:
+    """hook 결정 로그. 각자 컴퓨터에만 남고 어디에도 전송하지 않는다."""
+    override = os.environ.get("GARDENSTEP_TEAM_LOG")
+    return Path(override) if override else Path.home() / ".claude" / "gardenstep-team" / "decisions.jsonl"
+
+
+def log_decision(hook: str, decision: str, rules: list[str], root: Path | None = None) -> None:
+    """결정 한 건을 JSONL로 남긴다. 명령·파일 내용은 기록하지 않고 규칙 ID와 레포 이름만 남긴다."""
+    if os.environ.get("GARDENSTEP_TEAM_LOG_DISABLED") == "1":
+        return
+    entry = {
+        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "hook": hook,
+        "decision": decision,
+        "rules": rules,
+        "repo": root.name if root else "",
+    }
+    try:
+        path = log_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.exists() and path.stat().st_size > LOG_MAX_BYTES:
+            path.replace(path.with_suffix(".jsonl.1"))
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
 
 
 def read_input() -> dict:

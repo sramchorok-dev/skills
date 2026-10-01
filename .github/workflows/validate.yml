@@ -13,11 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Validate repository structure
         run: python3 scripts/validate_skills.py
+      - name: Plugin version bumped when plugin files change
+        if: ${{ github.event_name == 'pull_request' }}
+        run: python3 scripts/check_plugin_version.py --base "origin/${{ github.base_ref }}"
       - name: Test repository tools
         run: python3 -m unittest discover -s tests -v
       - name: Test bundled skill scripts
