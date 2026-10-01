@@ -1,7 +1,7 @@
 ---
 date: 2026-10-02
 branch: feat/team-plugin-v0.2
-pr:
+pr: 4
 type: feat
 risk: normal
 rollback: revert
