@@ -79,7 +79,7 @@ RULES: list[tuple[str, re.Pattern[str], str]] = [
 ]
 
 _PUSH_RE = re.compile(r"\bgit\b(?P<pre>[^|;&]*?)\spush\b(?P<args>[^|;&]*)")
-_PROTECTED_REF_RE = re.compile(r"(?:^|[\s:/+])(?:main|master|release/\S+)(?:\s|$)")
+_PROTECTED_REF_RE = re.compile(r"(?:^|[\s:/+])(?:main|master)(?:\s|$)")
 _PR_CREATE_RE = re.compile(r"\bgh\s+pr\s+create\b")
 
 
@@ -87,7 +87,7 @@ def push_to_protected(command: str, root: Path | None) -> str | None:
     for m in _PUSH_RE.finditer(command):
         args = m.group("args")
         if _PROTECTED_REF_RE.search(args):
-            return "보호 브랜치(main·release/*)로 push — 운영 배포로 이어질 수 있습니다"
+            return "보호 브랜치(main)로 push — 운영 배포로 이어질 수 있습니다"
         positional = [a for a in args.split() if not a.startswith("-")]
         if len(positional) <= 1 and root is not None:
             branch = c.current_branch(root)

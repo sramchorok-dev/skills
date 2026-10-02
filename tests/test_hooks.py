@@ -84,7 +84,7 @@ class GuardBashTest(unittest.TestCase):
 
     def test_protected_branch_and_force_push_ask(self):
         self.assertAsks("git push origin main", "보호 브랜치")
-        self.assertAsks("git push origin HEAD:release/tier2-shop-20261005", "보호 브랜치")
+        self.assertAsks("git push origin HEAD:main", "보호 브랜치")
         self.assertAsks("git -C gardenstep-server push origin dev:main", "보호 브랜치")
         self.assertAsks("git push --force origin feat/x", "force push")
         self.assertAsks("git push -f", "force push")
@@ -93,6 +93,7 @@ class GuardBashTest(unittest.TestCase):
 
     def test_feature_push_and_reads_are_quiet(self):
         self.assertQuiet("git push -u origin feat/cart-coupon")
+        self.assertQuiet("git push origin release/old-branch")  # 릴리스 브랜치는 2026-10-03부로 운영하지 않음
         self.assertQuiet("git status && git diff origin/dev...HEAD")
         self.assertQuiet("git log --oneline main..HEAD")
         self.assertQuiet("./gradlew test --tests '*OrderTest'")

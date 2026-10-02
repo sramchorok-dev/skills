@@ -74,7 +74,7 @@ flowchart TD
 |---|---|---|
 | `.env`·키 파일·`application-prod*`·`.claude/settings*.json` 편집 | **차단** | 비밀값·권한 설정은 사람이 다룬다 |
 | 이미 dev에 있는 Liquibase changeset 편집 | **차단** → 새 changeset을 만들라고 안내 | checksum이 바뀌면 배포가 멈춘다 |
-| `main`·`release/*` push, force push, 원격 브랜치 삭제 | **확인** | 운영 배포로 이어진다 |
+| `main` push, force push, 원격 브랜치 삭제 | **확인** | `main` push는 운영 배포로 이어진다 |
 | `gh pr merge`, `gh workflow run`, `gh run rerun` | **확인** | 머지·배포·롤백은 사람이 판단한다 |
 | 커밋 메시지·PR 제목에 `[skip ci]` | **확인** | PR CI·빌드·DEV 배포가 모두 건너뛰어진다. CI 초록 없이 머지되는 경로 |
 | `mysql … UPDATE/DELETE/DDL`, SQL 파일 실행, Liquibase 직접 실행 | **확인** | 운영 DB는 조회만, 쓰기는 JD가 SQL을 승인한 경우만 |

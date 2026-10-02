@@ -16,7 +16,7 @@ import _common as c
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 
 RULES = [
-    "main·release/* 직접 push, 머지, 배포·롤백 실행, DB 쓰기는 사람 확인을 거친다 (hook이 확인을 요청한다).",
+    "main 직접 push, 머지, 배포·롤백 실행, DB 쓰기는 사람 확인을 거친다 (hook이 확인을 요청한다).",
     "동작을 바꾸면 테스트를 먼저 쓰고 실패를 확인한다. PR은 /ship-pr로 연다.",
     "변경기록(docs/changes)의 '왜'는 사용자·이슈에서 받는다. 모르면 묻고 추측하지 않는다.",
 ]

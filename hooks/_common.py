@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 TEAM_REMOTE_RE = re.compile(r"sramchorok-dev/")
-PROTECTED_BRANCH_RE = re.compile(r"^(main|master|release/.+)$")
+PROTECTED_BRANCH_RE = re.compile(r"^(main|master)$")
 
 
 LOG_MAX_BYTES = 2 * 1024 * 1024

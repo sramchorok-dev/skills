@@ -22,7 +22,7 @@
 
 ## 작업 흐름
 
-- 기본 브랜치는 `dev`. 새 작업은 `feat/<짧은-이름>`·`fix/<짧은-이름>` 브랜치에서 한다. `main`·`release/*`에 직접 push하지 않는다.
+- 기본 브랜치는 `dev`. 새 작업은 `feat/<짧은-이름>`·`fix/<짧은-이름>` 브랜치에서 한다. `main`에 직접 push하지 않는다(main push = 운영 배포).
 - 동작을 바꾸면 테스트를 먼저 쓰고 실패를 확인한 뒤 구현한다. 규칙 정본: skills `gardenstep-test-audit`의 `references/testing-policy.md`.
 - PR은 `/ship-pr`로 연다: 테스트 점검 → 변경기록(`docs/changes/`) → PR 본문 `## 검증`.
 - 변경기록의 "왜"는 사용자·이슈에서 받는다. 모르면 묻고, 추측해서 쓰지 않는다.
