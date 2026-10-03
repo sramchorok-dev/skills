@@ -7,6 +7,7 @@ PR 단계에서 test-audit이 FAIL로 판정할 것을 편집 직후에 고치�
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 import _common as c
 
@@ -35,9 +36,11 @@ def decide(tool_input: dict) -> dict | None:
     if not path or not c.is_test_file(_rel(path)):
         return None
     text = new_text(tool_input)
-    found = [f"- `{rule}`: {why}" for rule, pattern, why in SMELLS if pattern.search(text)]
-    if not found:
+    hits = [(rule, why) for rule, pattern, why in SMELLS if pattern.search(text)]
+    if not hits:
         return None
+    c.log_decision("post_edit", "note", [rule for rule, _ in hits], c.repo_root(Path(path).parent) if Path(path).parent.exists() else None)
+    found = [f"- `{rule}`: {why}" for rule, why in hits]
     message = "[gardenstep-team] 방금 편집한 테스트에 팀 규칙 위반 가능성이 있습니다:\n" + "\n".join(found)
     return {"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": message}}
 

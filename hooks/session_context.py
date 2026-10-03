@@ -5,15 +5,18 @@ stdout이 그대로 에이전트 컨텍스트가 된다. 10줄 안쪽을 유지�
 """
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 import json
+import os
 from pathlib import Path
+import urllib.request
 
 import _common as c
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 
 RULES = [
-    "main·release/* 직접 push, 머지, 배포·롤백 실행, DB 쓰기는 사람 확인을 거친다 (hook이 확인을 요청한다).",
+    "main 직접 push, 머지, 배포·롤백 실행, DB 쓰기는 사람 확인을 거친다 (hook이 확인을 요청한다).",
     "동작을 바꾸면 테스트를 먼저 쓰고 실패를 확인한다. PR은 /ship-pr로 연다.",
     "변경기록(docs/changes)의 '왜'는 사용자·이슈에서 받는다. 모르면 묻고 추측하지 않는다.",
 ]
@@ -24,6 +27,51 @@ def plugin_version() -> str:
         return json.loads((PLUGIN_ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]
     except (OSError, KeyError, json.JSONDecodeError):
         return "?"
+
+
+LATEST_URL = "https://raw.githubusercontent.com/sramchorok-dev/skills/main/.claude-plugin/plugin.json"
+CHECK_EVERY = timedelta(hours=24)
+
+
+def _semver(v: str) -> tuple[int, ...]:
+    try:
+        return tuple(int(x) for x in v.split("."))
+    except (ValueError, AttributeError):
+        return ()
+
+
+def latest_version() -> str | None:
+    """main의 플러그인 version. 하루 한 번만 묻고(2초 제한) 결과를 캐시한다. 실패하면 None."""
+    if os.environ.get("GARDENSTEP_TEAM_NO_UPDATE_CHECK") == "1":
+        return None
+    cache = c.log_path().parent / "latest.json"
+    now = datetime.now(timezone.utc)
+    try:
+        cached = json.loads(cache.read_text(encoding="utf-8"))
+        if now - datetime.fromisoformat(cached["checked"]) < CHECK_EVERY:
+            return cached.get("version")
+    except (OSError, KeyError, ValueError, TypeError):
+        pass
+    version = None
+    try:
+        with urllib.request.urlopen(os.environ.get("GARDENSTEP_TEAM_LATEST_URL", LATEST_URL), timeout=2) as resp:
+            version = json.loads(resp.read().decode("utf-8")).get("version")
+    except Exception:
+        return None
+    try:
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps({"checked": now.isoformat(), "version": version}), encoding="utf-8")
+    except OSError:
+        pass
+    return version
+
+
+def update_notice() -> str | None:
+    current, latest = plugin_version(), latest_version()
+    if latest and _semver(latest) > _semver(current):
+        return (f"⬆ gardenstep-team 새 버전 v{latest}이 있습니다(현재 v{current}). "
+                "`claude plugin update gardenstep-team@sramchorok` 후 재시작하거나, /plugin에서 auto-update를 켜세요.")
+    return None
 
 
 def agents_md_shadowed(root: Path) -> bool:
@@ -52,6 +100,9 @@ def build(root: Path) -> str:
     lines += [f"- {rule}" for rule in RULES]
     if c.PROTECTED_BRANCH_RE.match(branch) or branch == "dev":
         lines.append(f"⚠ `{branch}`에서 작업 중입니다. 코드 변경은 새 브랜치(worktree)에서 하세요.")
+    notice = update_notice()
+    if notice:
+        lines.append(notice)
     if agents_md_shadowed(root):
         lines.append("⚠ 상위 디렉터리의 CLAUDE.md 때문에 이 레포의 AGENTS.md가 로드되지 않습니다. "
                      "/config → Project instructions를 `claude-md-and-agents-md`로 바꾸거나 AGENTS.md를 직접 읽으세요.")

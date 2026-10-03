@@ -8,7 +8,7 @@
 |---|---|---|
 | 팀 가이드 | [docs/team-agent-guide.md](docs/team-agent-guide.md) | 에이전트 코딩 규칙 전체 — **처음이면 여기부터** |
 | 팀 ADR | [docs/adr/](docs/adr/README.md) | 팀 공통 결정 (꼭 필요한 것만) |
-| Claude Code 플러그인 `gardenstep-team` | `.claude-plugin/`, `hooks/`, `commands/` | 가드레일 hook, `/ship-pr`, 아래 스킬 |
+| Claude Code 플러그인 `gardenstep-team` | `.claude-plugin/`, `hooks/`, `commands/` | 가드레일 hook, `/ship-pr`, `/hook-stats`, 아래 스킬 |
 | 레포 적용 템플릿 | [templates/repo/](templates/repo/) | AGENTS.md, `.claude/settings.json`, PR 템플릿, CI(change-gate, AI 리뷰) |
 
 ## 스킬 목록

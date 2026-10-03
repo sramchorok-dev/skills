@@ -24,23 +24,23 @@ _CLAUDE_SETTINGS_RE = re.compile(r"(?:^|/)\.claude/settings(?:\.local)?\.json$")
 _CHANGESET_RE = re.compile(r"(?:^|/)db/changelog/(?:.+/)?(?:changes|baseline)/[^/]+\.(?:ya?ml|xml|sql|json)$")
 
 
-def protected_reason(path: Path) -> str | None:
+def protected_rule(path: Path) -> tuple[str, str] | None:
     name = path.name
     posix = path.as_posix()
     if _ENV_RE.match(name) and not _ENV_EXAMPLE_RE.search(name):
-        return f"`{name}`는 비밀값 파일이라 에이전트가 편집하지 않습니다. 필요한 키 이름과 설정 방법을 사용자에게 안내하세요."
+        return "edit-secret", f"`{name}`는 비밀값 파일이라 에이전트가 편집하지 않습니다. 필요한 키 이름과 설정 방법을 사용자에게 안내하세요."
     if _KEY_RE.search(name):
-        return f"`{name}`는 키·인증서 파일이라 편집할 수 없습니다."
+        return "edit-key", f"`{name}`는 키·인증서 파일이라 편집할 수 없습니다."
     if _PROD_CONFIG_RE.match(name):
-        return f"`{name}`는 운영 설정입니다. 변경이 필요하면 diff를 제안하고 JD의 확인을 받으세요."
+        return "edit-prod-config", f"`{name}`는 운영 설정입니다. 변경이 필요하면 diff를 제안하고 JD의 확인을 받으세요."
     if _CLAUDE_SETTINGS_RE.search(posix):
-        return "Claude 권한·hook 설정은 사람이 직접 수정합니다. 필요한 변경을 사용자에게 제안하세요."
+        return "edit-claude-settings", "Claude 권한·hook 설정은 사람이 직접 수정합니다. 필요한 변경을 사용자에게 제안하세요."
     if "/.git/" in f"/{posix}":
-        return "`.git/` 내부 파일은 편집하지 않습니다. git 명령을 사용하세요."
+        return "edit-git-internal", "`.git/` 내부 파일은 편집하지 않습니다. git 명령을 사용하세요."
     return None
 
 
-def applied_changeset_reason(path: Path, cwd: str) -> str | None:
+def applied_changeset_rule(path: Path, cwd: str) -> tuple[str, str] | None:
     if not _CHANGESET_RE.search(path.as_posix()):
         return None
     root = c.repo_root(path.parent if path.parent.exists() else cwd)
@@ -53,7 +53,7 @@ def applied_changeset_reason(path: Path, cwd: str) -> str | None:
     base = c.merge_base(root)
     if not base or c.git(root, "cat-file", "-e", f"{base}:{rel}") is None:
         return None  # 이 브랜치에서 새로 만든 changeset은 수정해도 된다
-    return (f"`{rel}`는 이미 `{c.base_ref(root)}`에 들어간 Liquibase changeset입니다. 적용된 changeset을 고치면 "
+    return "edit-applied-changeset", (f"`{rel}`는 이미 `{c.base_ref(root)}`에 들어간 Liquibase changeset입니다. 적용된 changeset을 고치면 "
             "checksum 불일치로 배포가 멈춥니다. 수정 대신 새 changeset 파일을 추가하세요.")
 
 
@@ -64,9 +64,11 @@ def decide(tool_input: dict, cwd: str) -> dict | None:
     path = Path(raw)
     if not path.is_absolute() and cwd:
         path = Path(cwd) / path
-    reason = protected_reason(path) or applied_changeset_reason(path, cwd)
-    if not reason:
+    rule = protected_rule(path) or applied_changeset_rule(path, cwd)
+    if not rule:
         return None
+    rule_id, reason = rule
+    c.log_decision("guard_edit", "deny", [rule_id], c.repo_root(path.parent if path.parent.exists() else (cwd or ".")))
     return {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",

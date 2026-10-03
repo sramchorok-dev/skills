@@ -1,7 +1,7 @@
 # 각 레포 .github/workflows/cicd.yml의 jobs: 아래에 붙이거나 이 파일 그대로 둔다.
 # PR마다 docs/changes/ 변경기록이 있는지, '무엇'·'왜'가 채워졌는지, 마이그레이션이면 rollback이 적혔는지 본다.
 # 무료 플랜에서는 required check로 잠글 수 없다 — 팀 규칙: 빨간 X 상태로 머지하지 않는다.
-# 릴리스 동기화 PR(main 대상, release/* 브랜치)은 검사하지 않는다.
+# 출시 PR(main 대상)은 검사하지 않는다 — 변경기록은 dev로 들어온 PR마다 이미 있다.
 name: change-gate
 
 on:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   change-gate:
-    if: ${{ github.base_ref != 'main' && !startsWith(github.head_ref, 'release/') }}
+    if: ${{ github.base_ref != 'main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
