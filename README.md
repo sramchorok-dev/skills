@@ -17,6 +17,7 @@
 |---|---|---|
 | [`gardenstep-change-log`](skills/gardenstep-change-log/) | 품질 | PR마다 `docs/changes/` 변경기록(날짜·무엇·왜) 생성·검사, ADR 필요 판정 |
 | [`gardenstep-completion-qa`](skills/gardenstep-completion-qa/) | 품질 | 변경 동작별 TC·빌드·E2E·라이브 증거로 완료 판정 |
+| [`gardenstep-qa-run`](skills/gardenstep-qa-run/) | 품질 | QA 시트 TC를 DEV에서 실행해 실행기록 행·결함 초안 작성 (작은 모델도 같은 기준으로) |
 | [`gardenstep-report-wiki`](skills/gardenstep-report-wiki/) | 보고·공유 | Gardenstep HTML 보고서 공개 DEV Wiki 게시 |
 | [`gardenstep-test-audit`](skills/gardenstep-test-audit/) | 품질 | PR 테스트 코드의 팀 규칙 준수 점검·판정 (E2E 필수, 스멜, 영수증) |
 
