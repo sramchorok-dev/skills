@@ -1,7 +1,7 @@
 ---
 date: 2026-10-10
 branch: feat/qa-run-sheet-rules
-pr:
+pr: 6
 type: feat
 risk: normal
 rollback: revert
