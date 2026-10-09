@@ -15,6 +15,7 @@ NS = {
 }
 REL_NS = "{http://schemas.openxmlformats.org/package/2006/relationships}"
 
+RULES_TAB = "00 먼저읽기"
 TC_TAB = "01 TC정의"
 ISSUE_TAB = "04 결함과결정"
 AUTOMATION_TAB = "05 자동화매핑"
@@ -101,3 +102,14 @@ def load_tab(path: Path, tab: str) -> list[dict[str, str]]:
     if path.suffix.lower() == ".csv":
         return records(read_csv(path))
     return records(read_xlsx_tab(path, tab))
+
+
+def load_rules(path: Path) -> list[tuple[str, str]]:
+    """Team QA rules from the '00 먼저읽기' tab as (항목, 내용). Pure numbers (progress counters) are skipped."""
+    rules = []
+    for row in read_xlsx_tab(path, RULES_TAB):
+        cells = [cell.strip() for cell in row if cell and cell.strip()]
+        if len(cells) < 2 or re.fullmatch(r"[\d.,%]+", cells[1]):
+            continue
+        rules.append((cells[0], " | ".join(cells[1:])))
+    return rules

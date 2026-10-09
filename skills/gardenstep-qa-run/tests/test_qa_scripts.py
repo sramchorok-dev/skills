@@ -102,7 +102,9 @@ class CardTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.xlsx = Path(self.tmp.name) / "qa.xlsx"
-        make_xlsx(self.xlsx, {"00 먼저읽기": [["안내"]], "01 TC정의": [TC_HEADER] + TC_ROWS,
+        make_xlsx(self.xlsx, {"00 먼저읽기": [["안내"], ["PASS", "모든 기대 결과 확인. 증거 필수."],
+                                                ["자동실행 표기", "실행자 칸은 책임자(사람)만 기재."], ["PASS", "20"]],
+                              "01 TC정의": [TC_HEADER] + TC_ROWS,
                               "04 결함과결정": [ISSUE_HEADER] + ISSUE_ROWS})
 
     def tearDown(self):
@@ -126,6 +128,21 @@ class CardTests(unittest.TestCase):
         code, _, err = run_main(tc_cards, [str(self.xlsx), "--ids", "A-01,Z-99"])
         self.assertEqual(code, 0)
         self.assertIn("시트에 없는 TC ID: Z-99", err)
+
+    def test_rules_come_from_sheet_tab_and_skip_counters(self):
+        code, out, _ = run_main(tc_cards, [str(self.xlsx), "--rules"])
+        self.assertEqual(code, 0)
+        self.assertIn("- PASS: 모든 기대 결과 확인. 증거 필수.", out)
+        self.assertIn("- 자동실행 표기: 실행자 칸은 책임자(사람)만 기재.", out)
+        self.assertNotIn("- PASS: 20", out)
+        self.assertNotIn("안내", out.split("\n", 2)[2])
+
+    def test_rules_need_xlsx(self):
+        csv_path = Path(self.tmp.name) / "tc.csv"
+        csv_path.write_text(",".join(TC_HEADER) + "\n", encoding="utf-8")
+        code, _, err = run_main(tc_cards, [str(csv_path), "--rules"])
+        self.assertEqual(code, 2)
+        self.assertIn("xlsx", err)
 
     def test_csv_of_tc_tab_works(self):
         csv_path = Path(self.tmp.name) / "tc.csv"
