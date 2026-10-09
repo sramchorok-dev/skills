@@ -1,7 +1,7 @@
 ---
 date: 2026-10-09
 branch: feat/qa-run-skill
-pr:
+pr: 5
 type: feat
 risk: normal
 rollback: revert
