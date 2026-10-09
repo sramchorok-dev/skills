@@ -11,6 +11,11 @@
       "description": "코드·스키마·CI·배포 변경의 완료 판정 — 변경 동작별 TC·빌드·E2E·라이브 증거 매핑"
     },
     {
+      "name": "gardenstep-qa-run",
+      "category": "quality",
+      "description": "QA 시트 TC를 DEV에서 한 개씩 실행하고 02 실행기록 행·04 결함 초안을 만든다 — 작은 모델용 스크립트 판정"
+    },
+    {
       "name": "gardenstep-report-wiki",
       "category": "reporting",
       "description": "Gardenstep HTML 보고서의 공개 DEV Wiki 검증·게시·readback"
