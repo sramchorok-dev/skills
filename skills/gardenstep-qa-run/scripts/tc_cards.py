@@ -6,6 +6,7 @@ Examples:
   python3 tc_cards.py qa-sheet.xlsx --area P --priority P0
   python3 tc_cards.py qa-sheet.xlsx --issue R52
   python3 tc_cards.py tc.csv --ids G-03          # CSV of the '01 TC정의' tab
+  python3 tc_cards.py qa-sheet.xlsx --rules      # team QA rules from the '00 먼저읽기' tab
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from qa_sheet import AUTOMATION_TAB, ISSUE_TAB, TC_TAB, load_tab  # noqa: E402
+from qa_sheet import AUTOMATION_TAB, ISSUE_TAB, TC_TAB, load_rules, load_tab  # noqa: E402
 
 STEP_RE = re.compile(r"(?:^|\s)(\d{1,2})\.\s+")
 
@@ -146,7 +147,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--priority", help="P0 / P1 / P2")
     parser.add_argument("--issue", help="연결 이슈 ID (예: R52)")
     parser.add_argument("--list", action="store_true", help="카드 대신 ID·의도 한 줄 목록만")
+    parser.add_argument("--rules", action="store_true", help="'00 먼저읽기' 탭의 팀 QA 규칙만 출력")
     args = parser.parse_args(argv)
+
+    if args.rules:
+        if args.sheet.suffix.lower() == ".csv":
+            print("규칙은 xlsx의 '00 먼저읽기' 탭에서 읽습니다. 시트 전체를 xlsx로 받아 주세요.", file=sys.stderr)
+            return 2
+        try:
+            rules = load_rules(args.sheet)
+        except (KeyError, OSError) as error:
+            print(f"규칙 탭을 읽지 못했습니다: {error}", file=sys.stderr)
+            return 2
+        print("# 팀 QA 규칙 (시트 '00 먼저읽기' — 이 스킬과 다르면 시트가 우선)\n")
+        for key, value in rules:
+            print(f"- {key}: {value}")
+        return 0
 
     try:
         tcs = load_tab(args.sheet, TC_TAB)
