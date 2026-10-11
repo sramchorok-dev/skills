@@ -70,7 +70,8 @@ def run_matrix(rows, script, extra=None, files=None):
     stdout, stderr = io.StringIO(), io.StringIO()
     with redirect_stdout(stdout), redirect_stderr(stderr):
         code = pkg_matrix.main(argv, http=http, sleep=sleeps.append, clock=lambda: 0.0)
-    result = list(csv.DictReader(out.open(encoding="utf-8"), delimiter="\t")) if out.exists() else []
+    result = (list(csv.DictReader(io.StringIO(out.read_text(encoding="utf-8")), delimiter="\t"))
+              if out.exists() else [])
     tmp.cleanup()
     return code, result, http, sleeps, stdout.getvalue(), stderr.getvalue()
 
@@ -111,7 +112,8 @@ class PkgMatrixTests(unittest.TestCase):
         row = rows[0]
         self.assertEqual(row["layout_status"], "REVIEW_REQUIRED")
         self.assertEqual(row["quote"], "HTTP_409:TIER2-409-11")
-        self.assertEqual(row["internal_text"], "시드 간격; 배치 검토 항목; 구성과 가격 확인 중")
+        self.assertEqual(row["api_internal_text"], "시드 간격; 배치 검토 항목; 구성과 가격 확인 중")
+        self.assertEqual(row["engine_diagnostics"], "SEED_GAP")
 
     def test_running_job_is_polled_with_clamped_wait(self):
         running = Response(202, {"jobId": "j9", "status": "RUNNING", "retryAfterMs": 50, "artifact": None,
@@ -170,7 +172,88 @@ class PkgMatrixTests(unittest.TestCase):
         self.assertEqual((row["wide_notice"], row["max_same_species_clusters"], row["wide_rule_ok"]), ("yes", "2", "no"))
         self.assertEqual(row["tree_issue"], "overlap:T1/T1")
         self.assertTrue(row["trees"].startswith("2 (나무수국)"))
-        self.assertIn("넓은 공간 안내 기준 불일치 1", out)
+        self.assertIn("넓은 공간 안내 기준 불일치(안내인데 같은 품종 3덩이 미만) 1", out)
+
+    def test_height_band_matches_item_id_when_product_code_is_legacy(self):
+        # API productCode가 옛 코드(GS-PL-007)여도 itemId(A-054)로 시트 밴드표와 맞춘다.
+        plants = [{"productCode": "GS-PL-A032", "itemId": "A-032", "representativeRank": 1, "stage": "MAIN"},
+                  {"productCode": "GS-PL-007", "itemId": "A-054", "representativeRank": 2, "stage": "P"},
+                  {"productCode": "GS-PL-A047", "itemId": "A-047", "representativeRank": None, "stage": "FILL"}]
+        files = {"bands.csv": "productCode,band,heightCm,itemId\nGS-PL-A032,중상,68,A-032\n"
+                              "GS-PL-A054,앞,25,A-054\nGS-PL-A057,앞,25,A-057\n",
+                 "reps.csv": "package,rank,productCode,itemId\nC2,1,GS-PL-A032,A-032\nC2,2,GS-PL-A057,A-057\n"}
+        extra = ["--catalog", "{root}/bands.csv", "--reps", "{root}/reps.csv"]
+        script = lambda art: {("POST", "/tier2/layout/preview-jobs"): [job(art)],
+                              ("POST", "/tier2/pricing/quote"): [Response(200, QUOTE_OK, {})]}
+        _, rows, _, _, _, _ = run_matrix(["I1,C2,6,2,BACK,,,,,,,,"], script(artifact(plants=plants)),
+                                         files=files, extra=extra)
+        self.assertEqual(rows[0]["height_band_violations"], "-")
+        self.assertEqual(rows[0]["fill_count"], "1")
+        # 대체가 없으면(MAIN·FILL뿐) 밴드표가 없어도 확인할 것이 없으므로 '-'다.
+        _, rows, _, _, _, _ = run_matrix(["I2,C2,6,2,BACK,,,,,,,,"], script(artifact(plants=[plants[0], plants[2]])))
+        self.assertEqual(rows[0]["height_band_violations"], "-")
+
+    def test_server_diagnostics_are_information_not_band_violations(self):
+        diagnostics = [{"code": "HEIGHT_BAND_SUBSTITUTE_REJECTED", "message": "높이 조건에 맞지 않는 우선 대체를 건너뛰었습니다",
+                        "clusterId": None},
+                       {"code": "TREE_CROWN_OVERLAP", "message": "나무 겹침", "clusterId": None},
+                       {"code": "SIMILAR_COLOR_ADJACENCY", "message": "비슷한 색", "clusterId": "CL-1"},
+                       {"code": "SIMILAR_COLOR_ADJACENCY", "message": "비슷한 색", "clusterId": "CL-2"}]
+        art = artifact(diagnostics=diagnostics)
+        art["selection"]["warnings"] = ["NO_VALID_SUBSTITUTE"]
+        _, rows, _, _, out, _ = run_matrix(
+            ["D1,C1,6,2,BACK,,,,,,,,"],
+            {("POST", "/tier2/layout/preview-jobs"): [job(art)],
+             ("POST", "/tier2/pricing/quote"): [Response(200, QUOTE_OK, {})]})
+        row = rows[0]
+        self.assertEqual(row["height_band_violations"], "-")
+        self.assertEqual(row["engine_diagnostics"], "HEIGHT_BAND_SUBSTITUTE_REJECTED; SIMILAR_COLOR_ADJACENCY×2; "
+                                                    "TREE_CROWN_OVERLAP; warn:NO_VALID_SUBSTITUTE")
+        self.assertEqual(row["tree_issue"], "server:TREE_CROWN_OVERLAP")
+        self.assertIn("높이 밴드 위반 0", out)
+        self.assertIn("참고(API 수준, 화면 판정 아님)", out)
+
+    def test_three_regions_without_wide_notice_follows_server_rule(self):
+        # 서버는 면적 때문에 반복할 때만 안내한다. 작은 화단 앞줄 보강으로 3덩이가 된 것은 불일치가 아니다.
+        clusters = [{"productCode": "A1", "label": "가", "heightCm": 25, "quantity": 3}] * 3
+        _, rows, _, _, _, _ = run_matrix(
+            ["W2,C1,3,2,BACK,,,,,,,,"],
+            {("POST", "/tier2/layout/preview-jobs"): [job(artifact(shortage=False, clusters=clusters))],
+             ("POST", "/tier2/pricing/quote"): [Response(200, QUOTE_OK, {})]})
+        row = rows[0]
+        self.assertEqual((row["wide_notice"], row["max_same_species_clusters"], row["wide_rule_ok"]), ("no", "3", "yes"))
+        self.assertIn("면적 반복 아님", row["note"])
+
+    def test_rescore_saved_json_without_network(self):
+        tmp = tempfile.TemporaryDirectory()
+        root = Path(tmp.name)
+        combos = root / "combos.csv"
+        combos.write_text(HEADER + "\nJ1,C1,6,2,BACK,,,,,,,,\n", encoding="utf-8")
+        saved = root / "json"
+        script = {("POST", "/tier2/layout/preview-jobs"): [job(artifact())],
+                  ("POST", "/tier2/pricing/quote"): [Response(200, QUOTE_OK, {})]}
+        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            pkg_matrix.main(["--base-url", BASE, "--combos", str(combos), "--out", str(root / "a.tsv"),
+                             "--sleep", "0", "--save-json", str(saved)], http=FakeHttp(script), sleep=lambda _: None)
+
+        def no_network(*_):
+            raise AssertionError("다시 채점에서 네트워크를 부르면 안 된다")
+
+        out = io.StringIO()
+        with redirect_stdout(out), redirect_stderr(io.StringIO()):
+            code = pkg_matrix.main(["--rescore-json", str(saved), "--out", str(root / "b.tsv")], http=no_network)
+        self.assertEqual(code, 0)
+        rows = list(csv.DictReader(io.StringIO((root / "b.tsv").read_text(encoding="utf-8")), delimiter="\t"))
+        self.assertEqual((rows[0]["combo_id"], rows[0]["layout_status"], rows[0]["package_amount"]),
+                         ("J1", "READY", "742160"))
+        self.assertNotIn("429 재시도", out.getvalue())
+        tmp.cleanup()
+
+    def test_run_needs_base_url_and_combos_unless_rescoring(self):
+        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as err:
+            code = pkg_matrix.main(["--out", "x.tsv"])
+        self.assertEqual(code, 2)
+        self.assertIn("--rescore-json", err.getvalue())
 
     def test_c6_sends_screening_length_on_wall_axis(self):
         script = {("POST", "/tier2/layout/preview-jobs"): [job(artifact())] * 3,

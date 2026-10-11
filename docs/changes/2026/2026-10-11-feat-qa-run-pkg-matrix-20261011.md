@@ -38,3 +38,15 @@ adr: none
   넓은 공간 기준·나무 겹침, C6 길이 축, 운영 주소 거부, 금지 문구·허용 문맥·오프라인·LOW_TEXT)
 - `validate_skills.py`, 저장소 테스트, 플러그인 버전 검사, `git diff --check`
 - 실제 DEV 호출은 이 PR에서 하지 않았다(서버 반영 후 QA 회차에서 실행).
+
+## 첫 DEV 실행(339조합) 뒤 고친 것
+
+- 높이 밴드: 대체가 없는 조합(MAIN·FILL뿐)도 `unchecked`로 세던 것을 `-`로 고쳤다. API `productCode`가 시트 sku와 다른
+  품목(옛 코드가 남은 품목)이 있어 밴드표·대표표를 `itemId`로 먼저 맞춘다. 배치도가 없는 조합은 `n/a`.
+- 서버 진단 코드(`HEIGHT_BAND_SUBSTITUTE_REJECTED`·`NO_VALID_SUBSTITUTE`·`REPRESENTATIVE_SOLD_OUT` 등)를 위반으로 세지
+  않고 `engine_diagnostics` 정보 열에 모은다. `TREE_CROWN_OVERLAP`·`TREE_CROWN_OUTSIDE_BED`는 `tree_issue`에 합친다.
+- 내부 문구 열을 `api_internal_text`로 바꾸고 요약에서 「참고(API 수준, 화면 판정 아님)」로 분리했다. 화면은 진단을 숨긴다.
+- 넓은 공간 안내: 서버 규칙은 「면적 때문에 반복 ∧ 같은 품종 3덩이 이상」이다. 면적 반복 여부는 응답에 없어 필요조건
+  (안내면 3덩이 이상)만 판정하고, 작은 화단 앞줄 보강으로 3덩이인데 안내가 없는 것은 정상으로 `note`에 남긴다.
+- `--rescore-json`: 저장한 응답을 네트워크 없이 다시 채점한다. 저장 JSON에 배치도 오류 메시지(`layout_message`)도 남긴다.
+- 테스트 5건 추가(itemId 매칭·대체 없음 `-`, 서버 진단 정보 처리, 서버 기준 넓은 공간, 다시 채점 무네트워크, 인자 검사).

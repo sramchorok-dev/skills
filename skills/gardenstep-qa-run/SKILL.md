@@ -116,6 +116,8 @@ python3 <skill>/scripts/copy_policy.py --base-url <DEV FE 주소> --out runs/<Ru
 - 둘 다 **읽기 전용**이다. 일괄 실행 중에 담기·주문·결제를 하지 않는다(요청받아도 이 단계에서는 하지 않는다).
 - 요청은 하나씩 보낸다. 429면 기다렸다 다시 보내고, 병렬로 바꾸지 않는다.
 - 결과는 API 수준이다. 화면 기준 항목은 브라우저로 따로 확인하고, 표의 `unchecked`·`LOW_TEXT`는 확인불가다.
+  `api_internal_text`·`engine_diagnostics`는 API 응답 정보라 고객 화면 FAIL로 세지 않는다. 판정 규칙을 고친 뒤에는
+  DEV를 다시 부르지 말고 `--rescore-json`으로 저장한 응답만 다시 채점한다.
 - 열의 뜻과 TC(B-14~B-19, D-08, E-15, A-11)로 옮기는 법: [references/pkg-matrix.md](references/pkg-matrix.md)
 
 ## 하지 않는 것
