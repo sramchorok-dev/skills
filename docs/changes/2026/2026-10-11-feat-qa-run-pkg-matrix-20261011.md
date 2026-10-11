@@ -1,7 +1,7 @@
 ---
 date: 2026-10-11
 branch: feat/qa-run-pkg-matrix-20261011
-pr: TBD
+pr: 7
 type: feat
 risk: normal
 rollback: revert
