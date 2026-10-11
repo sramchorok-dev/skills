@@ -104,6 +104,20 @@ python3 <skill>/scripts/qa_record.py summary --run runs/<Run ID>.tsv
 - 기준 자체가 낡았거나 서로 다르다고 본 TC는 "TC 갱신 필요?"로 따로 모아 근거와 함께 적는다 —
   기준을 고치는 결정은 사람이 한다.
 
+## 6. 일괄 실행: PKG-MATRIX·A-11 문구
+
+패키지 5종 × 크기 × 벽 방향 조합(시트 `07` PKG-MATRIX)은 화면으로 하나씩 누르지 않고 스크립트로 먼저 돌린다.
+
+```bash
+python3 <skill>/scripts/pkg_matrix.py --base-url <DEV API 주소> --combos <조합.csv> --out runs/<Run ID>-pkg-matrix.tsv
+python3 <skill>/scripts/copy_policy.py --base-url <DEV FE 주소> --out runs/<Run ID>-a11.tsv
+```
+
+- 둘 다 **읽기 전용**이다. 일괄 실행 중에 담기·주문·결제를 하지 않는다(요청받아도 이 단계에서는 하지 않는다).
+- 요청은 하나씩 보낸다. 429면 기다렸다 다시 보내고, 병렬로 바꾸지 않는다.
+- 결과는 API 수준이다. 화면 기준 항목은 브라우저로 따로 확인하고, 표의 `unchecked`·`LOW_TEXT`는 확인불가다.
+- 열의 뜻과 TC(B-14~B-19, D-08, E-15, A-11)로 옮기는 법: [references/pkg-matrix.md](references/pkg-matrix.md)
+
 ## 하지 않는 것
 
 - 운영(PROD) 화면·관리자에서 실행하지 않는다. 주소가 운영이면 멈추고 묻는다.
