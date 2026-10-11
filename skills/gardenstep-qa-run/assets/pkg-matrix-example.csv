@@ -1,0 +1,7 @@
+combo_id,sku,width_m,depth_m,wall,light,floor,climate_zone,conditions,flower_chips,seed,expect,source
+EX-01,C1,6,2,BACK,,,,,,,READY + 견적 OK + 가이드 줄,예시
+EX-02,C1,1.5,1,BACK,,,,,,,상담 안내(REVIEW_REQUIRED·409) + 내부 문구 없음,예시
+EX-03,C3,3,2,BACK,,,,,,,READY + 넓은 공간 안내 없음,예시
+EX-04,C2,6,2,NONE,,,,,,,나무수국이 큰나무(trees)로 들어가지 않음,예시
+EX-05,C6,6,1,BACK,,,,,,,lengthM=6 견적 OK,예시
+EX-06,C5,3,2,LEFT,,,,,,,꽃 색 미선택이어도 READY,예시
