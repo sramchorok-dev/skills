@@ -1,6 +1,6 @@
 ---
 name: gardenstep-qa-run
-description: Run Gardenstep Tier2 QA test cases on the DEV environment exactly as the QA sheet ("Tier2 QA · TC와 실행 기록") defines them, and produce paste-ready '02 실행기록' rows (Run ID, SHA, verdict, 실제 결과, 증거) plus '04 결함과결정' drafts. Use this whenever someone asks to QA, 재검수, 재시험, run or check TC IDs like A-01/G-03/P-22, verify an R-issue fix (R52 등) on DEV, fill the QA execution log, or check a screen against the QA sheet — even if they only say "DEV에서 확인해줘" or "QA 돌려줘". Built so a small model (Haiku) can execute TCs one at a time with scripted parsing and verdicts. Not for writing automated test code (use gardenstep-test-audit) or for judging whether a code change is complete (use gardenstep-completion-qa).
+description: Run manual computer-use/browser-use E2E journeys with versioned cards, per-check evidence, safe resume and honest coverage. Use for critical/full/smoke, design matrix, or failed-run retest requests. Also run Gardenstep Tier2 QA test cases on the DEV environment exactly as the QA sheet ("Tier2 QA · TC와 실행 기록") defines them, and produce paste-ready '02 실행기록' rows (Run ID, SHA, verdict, 실제 결과, 증거) plus '04 결함과결정' drafts. Use this whenever someone asks to QA, 재검수, 재시험, run or check TC IDs like A-01/G-03/P-22, verify an R-issue fix (R52 등) on DEV, fill the QA execution log, or check a screen against the QA sheet — even if they only say "DEV에서 확인해줘" or "QA 돌려줘". Built so a small model (Haiku) can execute TCs one at a time with scripted parsing and verdicts. Not for writing automated test code (use gardenstep-test-audit) or for judging whether a code change is complete (use gardenstep-completion-qa).
 ---
 
 # Gardenstep DEV QA 실행
@@ -9,9 +9,30 @@ QA 시트의 TC를 **DEV에서 한 개씩** 실행하고, 시트에 그대로 �
 판정은 스크립트가 항목 결과로 계산한다. 사람이 시트를 보고 바로 믿을 수 있어야 하므로, 본 것만 적고
 못 본 것은 못 봤다고 적는다.
 
+## 실행 모드 선택
+
+**전체/핵심 E2E, browser-use/computer-use, 프로필, 200조합, 이어서 실행, 실패 재검수** 요청이면
+[브라우저 에이전트 실행 가이드](references/browser-agent.md)를 먼저 읽고 그 흐름을 수행한다.
+private 서비스 저장소의 `docs/qa/browser-agent/catalog.json`을 워크스페이스/프로젝트 문서에서 찾는다.
+계정·환경·실행 증거는 기존 private 경로를 사용한다. 이미 대화나 저장소에 있는 입력을 다시 묻지 않는다.
+카탈로그를 찾을 수 없으면 원문/fixture 공백을 보고하고 기존 시트 모드로 조용히 대체하지 않는다.
+
+```bash
+python3 <skill>/scripts/browser_agent.py validate --catalog <private-catalog.json>
+python3 <skill>/scripts/browser_agent.py list --catalog <private-catalog.json> --profile critical
+```
+
+이어서 가이드의 `init → template → 실제 화면 관찰 → record/resource → summary`를 따른다.
+`resume`은 최신 원문·배포 revision을 비교하며 다르면 새 run을 만든다. 기존 API matrix/copy 도구는
+보조 검증이고 browser 여정 완주가 아니다. 이 수동 suite는 CI에 넣지 않는다.
+
+**A-01 같은 원문 TC 실행·시트 붙여넣기 행만** 요청하면 아래 기존 시트 모드를 수행한다.
+프로젝트별 최신 승인 결정이 원문 기대값과 충돌하면 원문을 보존하고 버전 있는 overlay에 출처를 연결한다.
+판정 규칙 정본은 최신 시트이며 구현 화면을 기준으로 기대값을 임의 변경하지 않는다.
+
 ## 0. 시작 전에 받을 것
 
-다음이 없으면 추측하지 말고 사용자에게 한 번에 물어본다.
+대화·기존 private 문서에서 먼저 찾고, 그래도 없는 필수 입력만 한 번에 확인한다.
 
 1. **QA 시트 파일**: Google Sheets에서 받은 xlsx(권장) 또는 `01 TC정의` 탭 CSV 경로
 2. **실행할 TC**: TC ID 목록, 영역(예: P), 우선순위(P0), 또는 이슈 ID(예: R52)
@@ -106,7 +127,7 @@ python3 <skill>/scripts/qa_record.py summary --run runs/<Run ID>.tsv
 
 ## 하지 않는 것
 
-- 운영(PROD) 화면·관리자에서 실행하지 않는다. 주소가 운영이면 멈추고 묻는다.
+- 기존 시트 모드는 DEV 전용이다. 새 catalog 모드의 운영은 사용자가 요청한 `prod-readonly` 공개 읽기 카드만 허용한다. 운영 쓰기·결제·주문 생성은 포함하지 않는다.
 - 실제 카드 결제·환불은 TC가 요구하고 사용자가 이번 대화에서 지시한 경우에만, DEV 테스트 상점에서 한다.
 - 자동화 테스트 통과, 과거 PASS, 사전판정 메모를 이번 실행 결과로 옮기지 않는다.
 - 전화번호·이메일·주문 토큰·비밀번호를 결과·스크린샷 이름에 남기지 않는다(스크립트가 막는다).
