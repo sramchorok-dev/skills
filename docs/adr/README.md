@@ -27,3 +27,5 @@
 | [0004](0004-ai-code-review.md) | AI 코드 리뷰는 claude-code-action으로 시범 운영하고 수치로 확정한다 | proposed |
 
 테스트 규칙은 ADR이 아니라 [`testing-policy.md`](../../skills/gardenstep-test-audit/references/testing-policy.md)가 정본이다.
+
+- [0005 수동 브라우저 인수 검수와 CI 선택](0005-browser-acceptance-and-ci-selection.md) — 2026-10-24
