@@ -87,4 +87,7 @@ Production exists only as an explicitly selected `prod-readonly` catalog profile
 
 ## Reporting
 
+For deterministic comparison rules, risk-based ordering, repeated trials, fixture leases and CI timing,
+read [reliability.md](reliability.md). These add evidence checks; none changes an unexecuted browser step into PASS.
+
 Report PASS/FAIL/BLOCKED/NOT_RUN/N/A counts with selected scope and revision. Execution coverage is `(PASS+FAIL)/(selected−approved N/A)`; pass coverage is `PASS/(selected−approved N/A)`. BLOCKED and NOT_RUN stay in the denominator. A narrower smoke profile cannot become “all P0 passed.” State unresolved sources, incomplete external integration, browser-tool failures, first failures and cleanup debt explicitly. Frame/focus/real-iOS emulation differences require separate evidence. Prepare defect drafts; send or write to shared systems only on explicit user instruction.

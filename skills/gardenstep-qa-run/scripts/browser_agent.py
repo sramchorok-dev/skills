@@ -73,6 +73,10 @@ def validate_catalog(cat):
             require(nonempty(step.get('action')), 'empty UI action')
         for check in c['checks']:
             require(nonempty(check.get('expected')) and check.get('oracle') in source_ids, 'expected value and independent oracle required')
+            if 'grader' in check:
+                from qa_reliability import grade
+                try: grade(check['grader'], check['grader'].get('value'))
+                except (ValueError, AttributeError) as exc: raise ContractError(str(exc)) from exc
     card_ids = {c['id'] for c in cat['cards']}
     for route in cat['routes']:
         require(nonempty(route.get('path')) and nonempty(route.get('classification')), 'route classification required')
@@ -276,6 +280,13 @@ def validate_result(run, result):
         if card['spec_gaps'] and not definitions[check['id']].get('resolved', False):
             require(check.get('status') == 'UNKNOWN', 'unresolved oracle must remain UNKNOWN')
         require(check.get('status') in ('MATCH','MISMATCH','UNKNOWN'), 'unknown check status')
+        rule=definitions[check['id']].get('grader')
+        if rule and check['status'] != 'UNKNOWN':
+            from qa_reliability import grade
+            require('observed_value' in check, 'deterministic grader requires captured observed_value')
+            try: computed=grade(rule,check['observed_value'])
+            except ValueError as exc: raise ContractError(str(exc)) from exc
+            require(check['status']==computed, 'declared status disagrees with source-backed grader')
         require(nonempty(check.get('observed')) and check['observed'].strip().lower() not in ('ok','pass','정상','일치'), 'concrete observed value required')
         require(isinstance(check.get('evidence'),list), 'evidence must be a list')
         if check['status'] != 'UNKNOWN': require(check['evidence'], 'MATCH/MISMATCH requires evidence')

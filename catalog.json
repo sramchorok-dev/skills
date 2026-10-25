@@ -13,7 +13,7 @@
     {
       "name": "gardenstep-qa-run",
       "category": "quality",
-      "description": "수동 browser-use E2E와 QA 시트 TC 실행 — 버전 카드·항목 증거·재개·커버리지·정리 기록"
+      "description": "수동 browser-use E2E와 QA 시트 TC 실행 — 버전 카드·독립 판정·fixture 정리·반복 평가·위험도 계획"
     },
     {
       "name": "gardenstep-report-wiki",

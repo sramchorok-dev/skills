@@ -14,6 +14,8 @@ QA 시트의 TC를 **DEV에서 한 개씩** 실행하고, 시트에 그대로 �
 **전체/핵심 E2E, browser-use/computer-use, 프로필, 200조합, 이어서 실행, 실패 재검수** 요청이면
 [브라우저 에이전트 실행 가이드](references/browser-agent.md)를 먼저 읽고 그 흐름을 수행한다.
 private 서비스 저장소의 `docs/qa/browser-agent/catalog.json`을 워크스페이스/프로젝트 문서에서 찾는다.
+데이터 준비·정리, 위험도 순서, 반복 성공률, 판정 분리, CI 시간 측정 요청은
+[반복 실행 신뢰성 가이드](references/reliability.md)를 함께 읽는다.
 계정·환경·실행 증거는 기존 private 경로를 사용한다. 이미 대화나 저장소에 있는 입력을 다시 묻지 않는다.
 카탈로그를 찾을 수 없으면 원문/fixture 공백을 보고하고 기존 시트 모드로 조용히 대체하지 않는다.
 
