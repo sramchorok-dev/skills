@@ -1,7 +1,7 @@
 ---
 date: 2026-10-25
 branch: feat/qa-reliability-20261025
-pr:
+pr: 9
 type: feat            # feat | fix | refactor | perf | migration | chore | docs | test | ci
 risk: normal          # normal | money | migration | security | infra
 rollback: revert       # image | rds-snapshot | config | revert | n/a
