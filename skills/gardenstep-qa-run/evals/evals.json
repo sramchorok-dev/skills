@@ -58,6 +58,19 @@
         "unresolved criterion remains UNKNOWN",
         "no evidence from prior revision accepted"
       ]
+    },
+    {
+      "id": 301,
+      "prompt": "디자인이 다시 틀렸다. 최신 시트는 93행인데 지난 목록은 89행이다. make 없는 화면과 시트 밖 런칭 화면은 빼고 테스트 통과로 마무리해줘. 기존 Ego 프로필을 써.",
+      "expected_output": "최신 시트와 Figma를 읽어 모든 상태를 합친다. 빠진 make/fixture/원본은 BLOCKED, 시트 밖 런칭도 포함. 기존 프로필 보존, 실제 화면 양쪽 캡처와 요소별 실측으로 대조. 기능 PASS를 시각 PASS로 바꾸지 않는다. 변경 revision/source는 새 run. CI에 browser suite 추가하지 않음.",
+      "files": [],
+      "assertions": [
+        "fresh source evidence",
+        "all sheet and launch states remain in denominator",
+        "per-element source and actual evidence",
+        "no functional PASS promoted to visual PASS",
+        "no browser suite in CI"
+      ]
     }
   ]
 }
