@@ -23,6 +23,15 @@ jobs:
       - name: Plugin version bumped when plugin files change
         if: ${{ github.event_name == 'pull_request' }}
         run: python3 scripts/check_plugin_version.py --base "origin/${{ github.base_ref }}"
+      - name: Change record and ADR rules
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -o pipefail
+          python3 skills/gardenstep-change-log/scripts/change_record.py check \
+            --repo . --branch "$HEAD_REF" --base "origin/${BASE_REF}" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Test repository tools
         run: python3 -m unittest discover -s tests -v
       - name: Test bundled skill scripts

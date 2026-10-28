@@ -144,6 +144,9 @@ adr: none
 2. 레포 2개 이상 또는 팀 작업 방식 전체에 영향
 3. 대안을 진지하게 검토했고, 반년 뒤 "왜?"라는 질문이 예상된다
 
+CI(`change-gate`)가 새 ADR의 기준·형식·분량·번호와 채택된 ADR의 수정 여부를 검사한다. 규칙 전체와 히스토리 검색법은
+[docs/adr/README.md](adr/README.md).
+
 레포 결정은 그 레포 `docs/decisions/`, 팀 결정은 이 저장소 [`docs/adr/`](adr/README.md). 한 페이지를 넘기지 않는다.
 
 ## 8. AI 코드 리뷰 (시범)
