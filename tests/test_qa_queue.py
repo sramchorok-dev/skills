@@ -55,6 +55,13 @@ class QueueTests(unittest.TestCase):
         first=qa_queue.enqueue(self.root,self.db)
         (self.root/'README.md').write_text('new docs');self.git('add','README.md');self.git('commit','-qm','docs')
         self.assertEqual(first,qa_queue.enqueue(self.root,self.db))
+    def test_unresolved_figma_oracle_blocks_scope(self):
+        import json
+        p=self.root/'components/card.tsx';p.parent.mkdir();p.write_text('ui')
+        m=self.root/'docs/qa/local-design-map.json';m.parent.mkdir(parents=True)
+        m.write_text(json.dumps({'schema_version':1,'rules':[{'paths':['components/*.tsx','docs/qa/local-design-map.json'],'cards':['C1'],'figma_nodes':['1:2'],'viewports':['pc'],'checks':['color'],'open_questions':['color source unknown']}]}))
+        plan=qa_queue.design_plan(self.root)
+        self.assertEqual(plan['status'],'BLOCKED');self.assertEqual(plan['open_questions'],['color source unknown'])
     def test_foreign_repo_rejected(self):
         self.git('remote', 'set-url', 'origin', 'https://example.com/foreign.git')
         with self.assertRaises(ValueError): qa_queue.enqueue(self.root, self.db)

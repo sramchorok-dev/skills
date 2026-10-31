@@ -18,7 +18,7 @@ Claude는 `hooks/hooks.json`의 SessionStart/Stop에서 실행한다. Codex는 `
 
 ## 영향 매핑
 
-서비스 레포의 `docs/qa/local-design-map.json`이 정본이다. 각 rule의 `paths` glob, `cards`, `figma_nodes`, `viewports`는 모두 명시한다. 누락된 파일·매핑은 BLOCKED다. 매핑 파일도 변경 대상이므로 자기 자신에 적용할 규칙을 포함한다. 실제 프로젝트 카탈로그와 Figma 정본을 확인한 후 작성하며, 이 저장소에 내부 노드를 넣지 않는다.
+서비스 레포의 `docs/qa/local-design-map.json`이 정본이다. 각 rule의 `paths` glob, `cards`, `figma_nodes`, `viewports`는 모두 명시한다. 누락된 파일·매핑 및 rule의 open_questions(미확정 기준)은 BLOCKED다. 매핑 파일도 변경 대상이므로 자기 자신에 적용할 규칙을 포함한다. 실제 프로젝트 카탈로그와 Figma 정본을 확인한 후 작성하며, 이 저장소에 내부 노드를 넣지 않는다.
 
 ```json
 {"schema_version":1,"rules":[{"paths":["components/card.tsx"],"cards":["CARD-ID"],"figma_nodes":["NODE-ID"],"viewports":["pc","mobile"],"checks":["title-visible"]}]}

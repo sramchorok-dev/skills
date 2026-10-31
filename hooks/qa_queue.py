@@ -63,14 +63,15 @@ def design_plan(root):
     data = json.loads(map_path.read_text(encoding='utf-8'))
     if data.get('schema_version') != 1 or not isinstance(data.get('rules'),list):
         raise ValueError('디자인 매핑 스키마 오류')
-    cards, nodes, viewports, checks, unmatched = set(), set(), set(), set(), []
+    cards, nodes, viewports, checks, unmatched, questions = set(), set(), set(), set(), [], set()
     for path in files:
         matched = [r for r in data['rules'] if any(fnmatch.fnmatchcase(path, pattern) for pattern in r.get('paths', []))]
         if not matched: unmatched.append(path)
         for rule in matched:
+            questions.update(rule.get('open_questions', []))
             if not rule.get('cards') or not rule.get('figma_nodes') or not rule.get('viewports') or not rule.get('checks'): unmatched.append(path)
             cards.update(rule.get('cards', [])); nodes.update(rule.get('figma_nodes', [])); viewports.update(rule.get('viewports', [])); checks.update(rule.get('checks', []))
-    return {'status':'BLOCKED' if unmatched else 'READY', 'reason':'매핑되지 않은 UI 변경' if unmatched else '',
+    return {'status':'BLOCKED' if unmatched or questions else 'READY', 'reason':'매핑 누락 또는 미확정 기준' if unmatched or questions else '', 'open_questions':sorted(questions),
             'unmapped':sorted(set(unmatched)), 'cards':sorted(cards), 'figma_nodes':sorted(nodes), 'viewports':sorted(viewports), 'checks':sorted(checks)}
 
 def assess_run(plan, manifest, report, head, dirty, design=None):
