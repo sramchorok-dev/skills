@@ -23,6 +23,8 @@ jobs:
       - name: Plugin version bumped when plugin files change
         if: ${{ github.event_name == 'pull_request' }}
         run: python3 scripts/check_plugin_version.py --base "origin/${{ github.base_ref }}"
+      - name: Install local QA image validation dependency
+        run: python3 -m pip install -r requirements-qa.txt
       - name: Test repository tools
         run: python3 -m unittest discover -s tests -v
       - name: Test bundled skill scripts

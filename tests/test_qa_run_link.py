@@ -1,6 +1,7 @@
 """Queue must call the actual browser-agent verifier and never promote unrun cells."""
 import importlib.util
 import json
+from PIL import Image
 import os
 from pathlib import Path
 import subprocess
@@ -40,8 +41,8 @@ class QueueLinkTest(unittest.TestCase):
    result=mod.ba.result_template(runpath,'CASE-01@pc');result.update({'preconditions_met':True,'steps_completed':['S1'],'ui_observation':'Opened screen','started_at':'2026-10-24T14:01:00Z','finished_at':'2026-10-24T14:02:00Z','session':{'context_id':'ctx','role_alias':'guest','isolation_verified':True,'proof':'clean dedicated session'}})
    for check in result['checks']:check.update({'status':'MATCH','observed':'shown','evidence':['screenshots/one.png']})
    mod.ba.record(runpath,result)
-   proof=b.root/'design';proof.mkdir();(proof/'figma.png').write_bytes(b'\x89PNG\r\n\x1a\nfigma screenshot');(proof/'actual.png').write_bytes(b'\x89PNG\r\n\x1a\nactual screenshot')
-   receipt=proof/'receipt.json';receipt.write_text(json.dumps({'schema_version':1,'revision':head,'source_url':'https://figma.com/file/example','source_checked_at':'2026-10-24T13:00:00Z','observed_at':'2026-10-24T14:00:00Z','source_observer':'independent QA agent','independent_source_observation':True,'cells':[{'node':'1:2','viewport':'pc','verdict':'MATCH','checks':[{'item':'color','expected':'white','actual':'white'}],'figma_screenshot':'figma.png','actual_screenshot':'actual.png'}]}))
+   proof=b.root/'design';proof.mkdir();Image.new('RGB',(2,2),'white').save(proof/'figma.png');Image.new('RGB',(2,2),'blue').save(proof/'actual.png')
+   receipt=proof/'receipt.json';receipt.write_text(json.dumps({'schema_version':1,'revision':head,'source_url':'https://figma.com/file/x','source_checked_at':'2026-10-24T13:00:00Z','observed_at':'2026-10-24T14:00:00Z','source_observer':'independent QA agent','independent_source_observation':True,'cells':[{'node':'1:2','node_url':'https://www.figma.com/design/x?node-id=1-2','viewport':'pc','verdict':'MATCH','checks':[{'item':'color','expected':'white','actual':'white'}],'figma_screenshot':'figma.png','actual_screenshot':'actual.png'}]}))
    env=dict(os.environ,GARDENSTEP_QA_DB=str(q.db));base=['python3',str(ROOT/'hooks/qa_queue.py')]
    subprocess.run(base+['link-design','--repo',str(q.root),'--id',task,'--receipt',str(receipt)],env=env,text=True,capture_output=True,check=True)
    out=subprocess.run(base+['link-run','--repo',str(q.root),'--id',task,'--run',str(runpath)],env=env,text=True,capture_output=True,check=True)
