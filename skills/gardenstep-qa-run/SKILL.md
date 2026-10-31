@@ -9,6 +9,10 @@ QA 시트의 TC를 **DEV에서 한 개씩** 실행하고, 시트에 그대로 �
 판정은 스크립트가 항목 결과로 계산한다. 사람이 시트를 보고 바로 믿을 수 있어야 하므로, 본 것만 적고
 못 본 것은 못 봤다고 적는다.
 
+## 로컬 QA 큐와 연결
+
+팀 훅이 로컬 UI 변경 QA를 접수했다면 `<plugin-root>/hooks/qa_queue.py plan --repo <worktree>`로 화면·Figma·카드 범위를 확인한다. 매핑 누락은 BLOCKED로 남긴다. 아래 browser-agent 절차를 실제 수행한 후 `link-run --repo <worktree> --id <task-id> --run <run-dir>`로 증거를 연결한다. `link-design --repo <worktree> --id <task-id> --receipt <receipt.json>`으로 노드·viewport별 Figma/실제 화면 증거도 연결한다. 실제 Figma 대조를 마친 후에만 receipt를 작성한다. link-design 이후 link-run을 호출하면 증거·범위·버전을 재검증하지만 독립 Figma 원본 입증 미완성으로 자동 PASS는 하지 않는다. 상세는 `hooks/QA-QUEUE.md`.
+
 ## 디자인 일치 검증
 
 디자인 대조·Figma 일치·디자인 재발 방지 요청은 [디자인 검증 절차](references/design-parity.md)를 먼저 읽는다.

@@ -3,6 +3,8 @@
 Gardenstep 레포(`gardenstep`·`gardenstep_admin`·`gardenstep-server`·`gardenstep-ai`)에서 코딩 에이전트와 함께 일하는 규칙.
 결정의 이유는 [ADR](adr/README.md)에 있다.
 
+> DEV 빠른 배포·로컬/사후 QA 정책은 [시범안](verification-policy.md)과 [ADR 0007](adr/0007-dev-fast-deploy-qa-pilot.md)을 따른다. 실제 서비스 CI 게이트 제거 전까지 기존 필수 검사는 유지한다.
+
 ## 1. 한눈에
 
 ```mermaid
@@ -143,6 +145,9 @@ adr: none
 1. 되돌리기 비싸다 (스키마·데이터·외부 계약·인프라·배포 방식)
 2. 레포 2개 이상 또는 팀 작업 방식 전체에 영향
 3. 대안을 진지하게 검토했고, 반년 뒤 "왜?"라는 질문이 예상된다
+
+CI(`change-gate`)가 새 ADR의 기준·형식·분량·번호와 채택된 ADR의 수정 여부를 검사한다. 규칙 전체와 히스토리 검색법은
+[docs/adr/README.md](adr/README.md).
 
 레포 결정은 그 레포 `docs/decisions/`, 팀 결정은 이 저장소 [`docs/adr/`](adr/README.md). 한 페이지를 넘기지 않는다.
 
