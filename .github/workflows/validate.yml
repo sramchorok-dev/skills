@@ -25,6 +25,15 @@ jobs:
         run: python3 scripts/check_plugin_version.py --base "origin/${{ github.base_ref }}"
       - name: Install local QA image validation dependency
         run: python3 -m pip install -r requirements-qa.txt
+      - name: Change record and ADR rules
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -o pipefail
+          python3 skills/gardenstep-change-log/scripts/change_record.py check \
+            --repo . --branch "$HEAD_REF" --base "origin/${BASE_REF}" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Test repository tools
         run: python3 -m unittest discover -s tests -v
       - name: Test bundled skill scripts

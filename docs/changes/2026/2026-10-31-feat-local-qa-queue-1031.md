@@ -6,7 +6,7 @@ type: feat
 risk: normal
 rollback: revert
 tests: [test_qa_queue.py]
-adr: none
+adr: docs/adr/0007-dev-fast-deploy-qa-pilot.md
 ---
 
 # 로컬 디자인 QA 요청 큐 초안
@@ -23,4 +23,4 @@ adr: none
 ## 확인한 것
 
 - 테스트 저장소에서 UI 변경·중복·변경 후 별도 접수·타 레포 거부 검증.
-- Codex/Claude 실제 세션 실행, 기존 QA 연결과 설치, 실패 복구는 미검증이다.
+- 격리 모의와 일반 세션에서 Claude·Codex 접수를 확인했다. 실제 Figma 원본 판정과 로컬 배포의 사후 QA 자동 접수는 미완료다.
