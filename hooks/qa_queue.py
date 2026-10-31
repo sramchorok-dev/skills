@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import fnmatch
 import importlib.util
+import qa_design_receipt
 import json
 import os
 from pathlib import Path
@@ -30,6 +31,7 @@ def connect(path=None):
     os.chmod(path, 0o600)
     db.execute('CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, repo TEXT NOT NULL, root TEXT NOT NULL, fingerprint TEXT NOT NULL, status TEXT NOT NULL, created TEXT NOT NULL)')
     db.execute('CREATE TABLE IF NOT EXISTS runs (task_id TEXT NOT NULL, path TEXT NOT NULL, run_id TEXT NOT NULL, PRIMARY KEY(task_id,path))')
+    db.execute('CREATE TABLE IF NOT EXISTS designs (task_id TEXT PRIMARY KEY, path TEXT NOT NULL, receipt TEXT NOT NULL)')
     return db
 
 def snapshot(root):
@@ -61,17 +63,17 @@ def design_plan(root):
     data = json.loads(map_path.read_text(encoding='utf-8'))
     if data.get('schema_version') != 1 or not isinstance(data.get('rules'),list):
         raise ValueError('디자인 매핑 스키마 오류')
-    cards, nodes, viewports, unmatched = set(), set(), set(), []
+    cards, nodes, viewports, checks, unmatched = set(), set(), set(), set(), []
     for path in files:
         matched = [r for r in data['rules'] if any(fnmatch.fnmatchcase(path, pattern) for pattern in r.get('paths', []))]
         if not matched: unmatched.append(path)
         for rule in matched:
-            if not rule.get('cards') or not rule.get('figma_nodes') or not rule.get('viewports'): unmatched.append(path)
-            cards.update(rule.get('cards', [])); nodes.update(rule.get('figma_nodes', [])); viewports.update(rule.get('viewports', []))
+            if not rule.get('cards') or not rule.get('figma_nodes') or not rule.get('viewports') or not rule.get('checks'): unmatched.append(path)
+            cards.update(rule.get('cards', [])); nodes.update(rule.get('figma_nodes', [])); viewports.update(rule.get('viewports', [])); checks.update(rule.get('checks', []))
     return {'status':'BLOCKED' if unmatched else 'READY', 'reason':'매핑되지 않은 UI 변경' if unmatched else '',
-            'unmapped':sorted(set(unmatched)), 'cards':sorted(cards), 'figma_nodes':sorted(nodes), 'viewports':sorted(viewports)}
+            'unmapped':sorted(set(unmatched)), 'cards':sorted(cards), 'figma_nodes':sorted(nodes), 'viewports':sorted(viewports), 'checks':sorted(checks)}
 
-def assess_run(plan, manifest, report, head, dirty):
+def assess_run(plan, manifest, report, head, dirty, design=None):
     """Never promote missing/partial scope, stale revisions or dirty trees to PASS."""
     if dirty or not head: return 'BLOCKED'
     if plan['status'] != 'READY': return 'BLOCKED'
@@ -81,9 +83,9 @@ def assess_run(plan, manifest, report, head, dirty):
     required = {f'{card}@{viewport}' for card in plan['cards'] for viewport in plan['viewports']}
     if not required or not required.issubset(selected): return 'BLOCKED'
     if report['counts']['FAIL']: return 'FAIL'
-    # browser-agent summary does not prove Figma node comparison.
-    # Keep the task open until a verified design-parity receipt can be bound.
-    if report['selected_scope_complete']: return 'BLOCKED'
+    # Receipt data cannot yet establish independent Figma source or visual equivalence.
+    # Never auto-promote to PASS until source verification is implemented.
+    if report['selected_scope_complete'] and design and design['verdict']=='PASS': return 'BLOCKED'
     return 'BLOCKED'
 
 def enqueue(root, path=None):
@@ -104,13 +106,37 @@ def tasks(root=None, path=None):
         if root:
             rows = db.execute('SELECT * FROM tasks WHERE root=? ORDER BY created DESC', (str(Path(root).resolve()),)).fetchall()
         else: rows = db.execute('SELECT * FROM tasks ORDER BY created DESC').fetchall()
-        return [dict(row) for row in rows]
+        output=[]
+        for row in rows:
+            item=dict(row)
+            if item['status']=='PASS':
+                try:
+                    repo=Path(item['root'])
+                    if snapshot(repo)!=item['fingerprint']: raise ValueError('source changed')
+                    dr=db.execute('SELECT path,receipt FROM designs WHERE task_id=?',(item['id'],)).fetchone()
+                    rr=db.execute('SELECT path FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',(item['id'],)).fetchone()
+                    if not dr or not rr: raise ValueError('missing receipt')
+                    plan=design_plan(repo); head=c.git(repo,'rev-parse','HEAD')
+                    design=qa_design_receipt.validate(dr['path'],plan['figma_nodes'],plan['viewports'],head,plan['checks'])
+                    if design!=json.loads(dr['receipt']): raise ValueError('design evidence changed')
+                    script=Path(__file__).resolve().parents[1]/'skills/gardenstep-qa-run/scripts/browser_agent.py'
+                    spec=importlib.util.spec_from_file_location('gardenstep_browser_agent',script)
+                    module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+                    report=module.summary(Path(rr['path'])); manifest,_,_=module.load_run(Path(rr['path']))
+                    state=assess_run(plan,manifest,report,head,bool(c.git(repo,'status','--porcelain')),design)
+                    if state!='PASS': raise ValueError('evidence incomplete')
+                except Exception:
+                    item['status']='BLOCKED'
+                    db.execute("UPDATE tasks SET status='BLOCKED' WHERE id=?",(item['id'],))
+            output.append(item)
+        return output
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['enqueue', 'status', 'start', 'block', 'link-run', 'plan'])
+    parser.add_argument('action', choices=['enqueue', 'status', 'start', 'block', 'link-run', 'link-design', 'plan'])
     parser.add_argument('--id', help='QA task ID')
     parser.add_argument('--run', help='existing browser-agent run directory')
+    parser.add_argument('--receipt', help='design comparison receipt JSON')
     parser.add_argument('--repo', default='.')
     args = parser.parse_args()
     root = c.repo_root(args.repo)
@@ -131,7 +157,18 @@ def main():
                     db.execute("UPDATE tasks SET status='STALE' WHERE id=?", (args.id,))
                     print('작업 버전이 변경되어 STALE 처리했습니다', file=sys.stderr)
                     return 1
-                if row[1] not in ('PENDING', 'RUNNING', 'BLOCKED'): raise ValueError('이미 종료된 작업입니다')
+                if row[1] not in ('PENDING', 'RUNNING', 'BLOCKED', 'FAIL'): raise ValueError('이미 종료된 작업입니다')
+                if args.action == 'link-design':
+                    if not args.receipt: parser.error('--receipt is required')
+                    plan = design_plan(root)
+                    if plan['status'] != 'READY': raise ValueError('디자인 매핑이 불완전합니다')
+                    head=c.git(root,'rev-parse','HEAD')
+                    design = qa_design_receipt.validate(args.receipt,plan['figma_nodes'],plan['viewports'],head,plan['checks'])
+                    db.execute('INSERT OR REPLACE INTO designs VALUES (?, ?, ?)', (args.id, design['receipt'], json.dumps(design)))
+                    # Never promote to PASS before linking and revalidating both QA and design receipts.
+                    db.execute('UPDATE tasks SET status=? WHERE id=?', ('FAIL' if design['verdict']=='FAIL' else 'BLOCKED', args.id))
+                    print(json.dumps({'task_id': args.id, 'design_verdict': design['verdict'], 'queue_status':'FAIL' if design['verdict']=='FAIL' else 'BLOCKED'},ensure_ascii=False))
+                    return 0
                 if args.action == 'link-run':
                     if not args.run: parser.error('--run is required')
                     script = Path(__file__).resolve().parents[1] / 'skills/gardenstep-qa-run/scripts/browser_agent.py'
@@ -140,7 +177,13 @@ def main():
                     report = module.summary(Path(args.run))
                     manifest, _, _ = module.load_run(Path(args.run))
                     plan = design_plan(root)
-                    state = assess_run(plan, manifest, report, c.git(root,'rev-parse','HEAD'), bool(c.git(root,'status','--porcelain')))
+                    head = c.git(root,'rev-parse','HEAD')
+                    design_row=db.execute('SELECT path, receipt FROM designs WHERE task_id=?', (args.id,)).fetchone()
+                    design=None
+                    if design_row:
+                        design=qa_design_receipt.validate(design_row[0],plan['figma_nodes'],plan['viewports'],head,plan['checks'])
+                        if design != json.loads(design_row[1]): raise ValueError('Figma 증거가 기록 후 변경됐습니다')
+                    state = assess_run(plan, manifest, report, head, bool(c.git(root,'status','--porcelain')), design)
                     db.execute('INSERT OR IGNORE INTO runs VALUES (?, ?, ?)', (args.id, str(Path(args.run).resolve()), report['run_id']))
                     db.execute('UPDATE tasks SET status=? WHERE id=?', (state, args.id))
                     print(json.dumps({'task_id': args.id, 'run_id': report['run_id'], 'counts':report['counts'], 'queue_status':state, 'scope':plan}, ensure_ascii=False))

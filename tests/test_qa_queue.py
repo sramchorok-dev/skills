@@ -30,7 +30,7 @@ class QueueTests(unittest.TestCase):
         p = self.root / 'components' / 'card.tsx'; p.parent.mkdir(); p.write_text('ui')
         self.assertEqual(qa_queue.design_plan(self.root)['status'], 'BLOCKED')
         mapping = self.root / 'docs/qa/local-design-map.json'; mapping.parent.mkdir(parents=True)
-        mapping.write_text(json.dumps({'schema_version':1, 'rules':[{'paths':['components/*.tsx','docs/qa/local-design-map.json'], 'cards':['QA-01'], 'figma_nodes':['1:2'], 'viewports':['pc']}]}))
+        mapping.write_text(json.dumps({'schema_version':1, 'rules':[{'paths':['components/*.tsx','docs/qa/local-design-map.json'], 'cards':['QA-01'], 'figma_nodes':['1:2'], 'viewports':['pc'], 'checks':['색상']}]}))
         result = qa_queue.design_plan(self.root)
         self.assertEqual(result['status'], 'READY'); self.assertEqual(result['cards'], ['QA-01'])
         (self.root / 'components/other.css').write_text('css')
@@ -39,7 +39,8 @@ class QueueTests(unittest.TestCase):
         plan={'status':'READY','cards':['C1'],'viewports':['pc','mobile']}
         manifest={'environment':{'revisions':{'fe':'a'*40}},'cells':[{'cell_id':'C1@pc'},{'cell_id':'C1@mobile'}]}
         report={'counts':{'FAIL':0}, 'selected_scope_complete':True}
-        self.assertEqual(qa_queue.assess_run(plan,manifest,report,'a'*40,False),'BLOCKED') # Figma receipt still missing
+        self.assertEqual(qa_queue.assess_run(plan,manifest,report,'a'*40,False),'BLOCKED')
+        self.assertEqual(qa_queue.assess_run(plan,manifest,report,'a'*40,False,{'verdict':'PASS'}),'BLOCKED')
         self.assertEqual(qa_queue.assess_run(plan,manifest,report,'a'*40,True),'BLOCKED')
         self.assertEqual(qa_queue.assess_run(plan,manifest,report,'b'*40,False),'BLOCKED')
         manifest['cells'].pop()
