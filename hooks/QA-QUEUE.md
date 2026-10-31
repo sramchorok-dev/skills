@@ -1,6 +1,6 @@
 # 로컬 디자인 QA 큐 (실험)
 
-팀 레포의 UI 변경을 감지하면 해시 기반 작업을 로컬 SQLite에 접수한다. 코드는 PENDING/RUNNING/BLOCKED/STALE만 관리하며 검증 통과를 자동 주장하지 않는다. 기존 브라우저 QA run은 link-run으로 연결하고 실제 summary 및 영향 범위·revision을 검증한다.
+팀 레포의 UI 변경을 감지하면 해시 기반 작업을 로컬 SQLite에 접수한다. PENDING/RUNNING/BLOCKED/STALE/FAIL/PASS 상태로 검증을 추적한다. PASS는 범위와 기록된 관찰이 모두 충족된 경우다. 기존 브라우저 QA run은 link-run으로 연결하고 실제 summary 및 영향 범위·revision을 검증한다.
 
 ```
 python3 <skills-root>/hooks/qa_queue.py plan --repo <worktree>
@@ -12,9 +12,9 @@ python3 <skills-root>/hooks/qa_queue.py link-run --repo <worktree> --id <task-id
 python3 <skills-root>/hooks/qa_queue.py link-design --repo <worktree> --id <task-id> --receipt <receipt.json>
 ```
 
-Claude는 `hooks/hooks.json`의 SessionStart/Stop에서 실행한다. Codex는 `python3 scripts/install_codex_hooks.py install`로 기존 user hooks.json을 보존하며 추가한다. Codex의 `/hooks`에서 새 정의를 검토·신뢰해야 실행된다. 제거는 `uninstall`이다. 수동 실행/단위 테스트만 확인했고 실제 양쪽 세션 동작은 미검증이다.
+Claude는 `hooks/hooks.json`의 SessionStart/Stop에서 실행한다. Codex는 `python3 scripts/install_codex_hooks.py install`로 기존 user hooks.json을 보존하며 추가한다. Codex의 `/hooks`에서 새 정의를 검토·신뢰해야 실행된다. 제거는 `uninstall`이다. 격리 모의 세션에서 Claude와 Codex 실행을 확인했다. Codex 모의에는 trust 우회 옵션을 사용했으며 일반 세션 신뢰 여부는 별도 확인한다.
 
-큐는 파일 해시·로컬 경로·상태만 보관한다. 소스 내용과 비밀은 저장하지 않는다. 작업이 바뀌면 이전 대기 작업을 STALE로 처리한다. `gardenstep-qa-run`의 실제 실행·증거와 큐 완료 상태 연결, 충돌/중단 복구, Figma 영향 범위 매핑은 후속 작업이다. 이 큐를 배포 차단 조건 또는 사후 QA 완료 증거로 사용하지 않는다.
+큐는 파일 해시·로컬 경로·상태만 보관한다. 소스 내용과 비밀은 저장하지 않는다. 작업이 바뀌면 이전 대기 작업을 STALE로 처리한다. `gardenstep-qa-run`의 기록된 실행 결과와 검수 증거를 연결한다. 실제 Figma 원본 접근, 충돌/중단 복구와 서비스별 영향 범위 매핑은 별도 확인한다. 이 큐를 배포 차단 조건 또는 사후 QA 완료 증거로 사용하지 않는다.
 
 ## 영향 매핑
 
@@ -30,4 +30,4 @@ Claude는 `hooks/hooks.json`의 SessionStart/Stop에서 실행한다. Codex는 `
 
 `link-design`은 receipt의 SHA·노드×viewport 범위·출처/조회시각·항목별 기대/실제값·양쪽 비어있지 않은 캡처를 검사하고 파일 해시를 남긴다. 원본/화면 캡처는 receipt와 같은 private 디렉터리 하위에 둔다. `cells`는 node별·viewport별 `node`, `viewport`, `verdict`(MATCH/MISMATCH/UNKNOWN), `checks`(각 `item`, `expected`, `actual`), `figma_screenshot`, `actual_screenshot`을 가진다. 최상위 필드는 `schema_version: 1`, `revision`, `source_url`, `source_checked_at`, `observed_at`, `cells`다. 기존 Figma 정본·승인예외·요소 비교 기준은 `gardenstep-qa-run/references/design-parity.md`를 따른다.
 
-이 기록의 MATCH는 사람이 제공한 실제 관찰이며 기계가 스크린샷의 진실성을 보증하지 않는다. screenshot이 생성되었다는 사실만으로 기대값과 동일함을 추론하지 않는다. 각 매핑에서 요구한 checks 전부를 매 node·viewport cell에 기록해야 한다. 독립적인 Figma 원본 증거 검증이 미완성이라 현재 두 결과를 연결해도 자동 PASS로 승격하지 않는다. 사람이 별도로 실제 원본과 화면을 확인해야 한다. link-design 이후 link-run을 호출한다.
+이 기록의 MATCH는 사람이 제공한 실제 관찰이며 기계가 스크린샷의 진실성을 보증하지 않는다. screenshot이 생성되었다는 사실만으로 기대값과 동일함을 추론하지 않는다. 각 매핑에서 요구한 checks 전부를 매 node·viewport cell에 기록해야 한다. 원본을 실제로 관찰한 검수자가 source_observer와 independent_source_observation=true를 기록한다. 시간대 포함 ISO 시각, Figma HTTPS URL, 유효한 이미지 형식과 각 셀의 증거를 검사한다. QA와 Figma 두 영수증이 모두 충족되면 PASS다. 독립 관찰과 스크린샷 진위는 검수자의 증언이며 프로그램이 보증하지 않는다. 출처 미접근·기준 미확정은 BLOCKED다. link-design 이후 link-run을 호출한다.

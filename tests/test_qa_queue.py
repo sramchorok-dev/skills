@@ -40,7 +40,7 @@ class QueueTests(unittest.TestCase):
         manifest={'environment':{'revisions':{'fe':'a'*40}},'cells':[{'cell_id':'C1@pc'},{'cell_id':'C1@mobile'}]}
         report={'counts':{'FAIL':0}, 'selected_scope_complete':True}
         self.assertEqual(qa_queue.assess_run(plan,manifest,report,'a'*40,False),'BLOCKED')
-        self.assertEqual(qa_queue.assess_run(plan,manifest,report,'a'*40,False,{'verdict':'PASS'}),'BLOCKED')
+        self.assertEqual(qa_queue.assess_run(plan,manifest,report,'a'*40,False,{'verdict':'PASS'}),'PASS')
         self.assertEqual(qa_queue.assess_run(plan,manifest,report,'a'*40,True),'BLOCKED')
         self.assertEqual(qa_queue.assess_run(plan,manifest,report,'b'*40,False),'BLOCKED')
         manifest['cells'].pop()
