@@ -1,12 +1,27 @@
 ---
 name: gardenstep-completion-qa
-description: Run the Gardenstep completion gate after any code, schema, configuration, CI, or deployment change in gardenstep, gardenstep_admin, gardenstep-server, gardenstep-ai, or a cross-repo flow. Invoke before claiming a feature or fix is complete, opening or merging its PR, handing it to a teammate, or finishing a deployment. Map every changed behavior to TC, integration/build, Playwright E2E, and live-smoke evidence; keep skipped or unverified gates explicit.
+description: Run the Gardenstep completion gate after any code, schema, configuration, CI, or deployment change in gardenstep, gardenstep_admin, gardenstep-server, gardenstep-ai, or a cross-repo flow. For DEV distinguish build, deploy, and deferred QA; for production apply the existing full completion gate. Invoke before claiming complete or reporting deployment. Map every changed behavior to TC, integration/build, Playwright E2E, and live-smoke evidence; keep skipped or unverified gates explicit.
 ---
 
 # Gardenstep completion QA
 
 Use this as a **completion gate**, not as a generic request to run every command. The diff and risk decide the
 coverage; the final evidence decides whether the word “complete” is accurate.
+
+## DEV fast deployment and deferred verification
+
+For a DEV deployment explicitly requested by the user, report three separate states: build (artifact/revision),
+deployment (target revision and health), and QA (PENDING/RUNNING/PASS/FAIL/BLOCKED with scope and owner).
+After a short diff/environment/revision review, build and deploy without synchronously requiring the full suite,
+E2E, browser agent, or Figma comparison. A successfully running revision may be reported as **DEV deployed** while
+QA remains PENDING. Record a concrete follow-up; never report the overall changed behavior as QA COMPLETE before
+all applicable evidence exists. If automatic post-deploy registration is not installed, explicitly record that gap
+and arrange the authorized follow-up. Existing workflow job dependencies are not removed by this instruction.
+
+The detailed steps below define verification and overall completion. For DEV, steps 2–4 and the browser journey in
+step 5 may run after deployment; revision and health confirmation belong to deployment itself. Existing migration
+and target-environment safeguards remain conditional on the change. For production, the existing full gate and
+step ordering below remain unchanged.
 
 ## 1. Establish the test contract
 

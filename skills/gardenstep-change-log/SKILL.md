@@ -1,6 +1,6 @@
 ---
 name: gardenstep-change-log
-description: Gardenstep 레포에서 PR마다 남기는 변경기록(docs/changes/YYYY/YYYY-MM-DD-<브랜치>.md)을 만들고 검사하며, 이 변경이 ADR까지 필요한지 판정할 때 사용한다. "변경기록 써줘", "change log", "왜 바꿨는지 기록", "PR 올리기 전 정리", "ADR 필요해?", "결정 기록 남겨"처럼 변경의 날짜·내용·사유를 남기거나 결정 문서가 필요한지 묻는 요청, 그리고 /ship-pr 절차에서 발동한다.
+description: Gardenstep 레포에서 PR마다 남기는 변경기록(docs/changes/YYYY/YYYY-MM-DD-<브랜치>.md)을 만들고 검사하며, 이 변경이 ADR까지 필요한지 판정할 때 사용한다. "변경기록 써줘", "change log", "왜 바꿨는지 기록", "PR 올리기 전 정리", "ADR 필요해?", "ADR 써줘", "결정 기록 남겨"처럼 변경의 날짜·내용·사유를 남기거나 결정 문서가 필요한지 묻는 요청, "그때 왜 그렇게 했지", "과거 결정 찾아줘", "히스토리 검색"처럼 레포의 변경·결정 이력을 찾는 요청, 그리고 /ship-pr 절차에서 발동한다.
 compatibility: Python 3.10+, git. 각 서비스 레포 디렉터리에서 실행
 ---
 
@@ -20,6 +20,9 @@ python3 "$SKILL_DIR/scripts/change_record.py" new --repo . --type feat --title "
 이미 이 브랜치의 기록이 있으면 새로 만들지 않고 경로만 출력한다. 템플릿: [assets/change-record.md](assets/change-record.md).
 
 ## 2. 채우기
+
+(`new`는 마이그레이션 파일 변경을 감지하면 `risk: migration`·`rollback: rds-snapshot`을 미리 채운다. 맞는지 확인한다.
+frontmatter의 `#` 주석은 지워도 된다.)
 
 | 칸 | 누가 | 기준 |
 |---|---|---|
@@ -42,8 +45,38 @@ python3 "$SKILL_DIR/scripts/change_record.py" new --repo . --type feat --title "
 3. 진지하게 검토한 대안이 있고, 반년 뒤 "왜 이렇게 했지?"라는 질문이 예상된다
 
 ADR 위치는 레포의 기존 디렉터리(`docs/decisions/`, 없으면 새로 만든다), 팀 공통 결정은 skills 저장소
-`docs/adr/`. 한 페이지를 넘기지 않는다. ADR을 쓰면 변경기록 `adr:`에 경로를 적는다.
-형식·목록: skills 저장소 `docs/adr/README.md`.
+`docs/adr/`. 만들기: `python3 "$SKILL_DIR/scripts/change_record.py" new-adr --title "<결정 한 문장>"`
+(다음 번호·틀 자동). 헤더 `- 기준:`에 충족한 기준 둘 이상을 적고, 한 페이지(80줄)를 넘기지 않는다.
+채택된 ADR은 고치지 않는다 — 새 ADR을 쓰고 옛 ADR의 `- 상태:`만 `superseded by NNNN`으로.
+ADR을 쓰면 변경기록 `adr:`에 경로를 적는다. CI가 검사하는 규칙 전체: skills 저장소 `docs/adr/README.md`.
+
+위험도 높은 변경(`migration`·`infra`·`security`)이 `adr: none`이면 `check`가 경고한다. 경고는 "ADR이 필요한지
+한 번 따져 보라"는 뜻이다. 기준 둘 이상이 아니면 그대로 둔다 — ADR을 채워 경고를 없애지 않는다.
+
+**기준을 셀 때**
+- 기준은 이 변경이 **실제로 만드는 사실**로만 센다. "외부 계약일 수도 있다" 같은 가능성은 세지 않는다.
+- 스키마(마이그레이션) 변경은 기준 1(되돌리기 비쌈)을 **혼자 충족한다.** 그래서 ADR이 되는지는 기준 2(다른 레포·팀 작업 방식에
+  영향) 또는 기준 3(진지하게 검토한 대안)에 달렸고, 둘 다 **사람만 아는 사실**이다.
+- 사람이 없는 실행에서는 기준 2·3을 충족하지 않은 것으로 두고 ADR을 쓰지 않는다. 대신 변경기록에
+  `adr: none (기준 1개: 스키마 변경뿐, 다른 레포 영향·검토한 대안은 확인 못 함)`처럼 **판정을 남기고** 완료 보고에서 사람에게 묻는다.
+
+**에이전트가 지키는 것**
+- `결정`(결정한 사람)·`기준`(충족한 기준)·`검토한 대안`은 사람에게 확인한 내용만 적는다. 모르면 한 문장으로 묻는다.
+  `check`를 통과시키려고 기준 단어를 채워 넣지 않는다 — 기준 둘이 안 되면 ADR을 쓰지 않고 변경기록 `## 왜`에 적는다.
+- 이미 채택된 ADR의 본문은 고치지 않는다. 결정이 바뀌면 `new-adr`로 새 ADR을 쓰고 옛 ADR의 `- 상태:`만 바꾼다.
+- ADR 파일명은 `NNNN-제목.md`뿐이다. 날짜 이름(`2026-10-03-….md`)으로 결정 문서를 만들지 않는다.
+- 번호 충돌(`다음 순번 …`)은 번호를 올려 파일명·제목·변경기록 `adr:`를 함께 바꾼다.
+
+## 3-1. 히스토리 찾기
+
+```bash
+python3 "$SKILL_DIR/scripts/history.py" --ref origin/dev 쿠폰 할인   # 단어가 모두 들어간 기록
+python3 "$SKILL_DIR/scripts/history.py" --risk migration --since 2026-09-01
+python3 "$SKILL_DIR/scripts/history.py" --kind adr
+```
+
+워크스페이스 루트에서 실행하면 세 레포를 함께 훑는다(`--root`로 지정 가능). 읽기 전용이다.
+과거 결정이 궁금하면 추측하지 말고 먼저 이 명령으로 찾는다.
 
 ## 4. 검사
 
@@ -51,7 +84,8 @@ ADR 위치는 레포의 기존 디렉터리(`docs/decisions/`, 없으면 새로 
 python3 "$SKILL_DIR/scripts/change_record.py" check --repo .
 ```
 
-검사 항목: 기록 존재, frontmatter 필수 값·허용 값, `무엇`·`왜` 내용, 마이그레이션 변경의 rollback.
+검사 항목: 기록 존재, frontmatter 필수 값·허용 값, `무엇`·`왜` 내용(상투어·10자 미만 거부), 마이그레이션 변경의 rollback,
+ADR 규칙(새 ADR 형식·기준·번호, 채택된 ADR 수정 금지, `adr:` 상호 참조).
 종료 코드 1 = 실패. CI(`change-gate`)와 PR 게이트 hook이 같은 검사를 쓴다.
 
 ## 완료 보고

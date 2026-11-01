@@ -1,8 +1,9 @@
 # NNNN. <결정을 한 문장으로>
 
-- 상태: proposed | accepted | superseded by NNNN | deprecated
+- 상태: proposed | accepted
 - 날짜: YYYY-MM-DD
 - 결정: <결정한 사람>
+- 기준: <충족한 기준 둘 이상: 되돌리기 비쌈 · 넓은 영향 · 대안 검토>
 
 ## 맥락
 
@@ -23,3 +24,5 @@
 - 좋아지는 것:
 - 감수하는 것:
 - 다시 볼 조건: <어떤 일이 생기면 이 결정을 재검토하나>
+
+<!-- `change_record.py new-adr --title "…"`가 이 틀로 다음 번호 파일을 만든다. CI가 검사하는 규칙은 README 「CI가 검사하는 것」. -->

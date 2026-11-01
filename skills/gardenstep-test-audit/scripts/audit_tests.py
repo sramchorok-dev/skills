@@ -644,7 +644,7 @@ def _find_by_basename(root: Path, name: str) -> bool:
     return False
 
 
-def check_pr_body(body: str, root: Path, require_mutation: bool = True) -> list[dict]:
+def check_pr_body(body: str, root: Path, require_mutation: bool = True, dev_pilot: bool = False) -> list[dict]:
     findings: list[dict] = []
     if not _RECEIPT_HEADING_RE.search(body):
         findings.append({"rule": "PR-RECEIPT-MISSING", "level": FAIL, "message": "PR 본문에 '## 검증' 섹션이 없다 — assets/pr-test-receipt.md 양식을 채운다"})
@@ -680,6 +680,12 @@ def check_pr_body(body: str, root: Path, require_mutation: bool = True) -> list[
     mutation_text = (mutation.group(1) or "").strip() if mutation else ""
     if require_mutation and not mutation_text and not (exempt_reason and exempt_reason != "없음"):
         findings.append({"rule": "PR-MUTATION-MISSING", "level": WARN, "message": "결함 감지 결과가 없다 — 구현 한 곳을 일부러 망가뜨려 어떤 테스트가 떨어졌는지 한 줄 적는다"})
+    if dev_pilot:
+        pending = re.findall(r"^\s*[-*]\s*(?:대기|미확인|실행\s*중)\s*[:：]\s*(\S.*)$", visible, re.M)
+        if pending:
+            findings.append({"rule": "PR-QA-PENDING", "level": WARN, "message": "DEV 사후 검증 대기: " + "; ".join(pending)})
+        if mutation_text and re.match(r"^(?:대기|미실행|미확인|예정)\b", mutation_text):
+            findings.append({"rule": "PR-MUTATION-PENDING", "level": WARN, "message": "결함 감지는 아직 수행되지 않았습니다"})
     return findings
 
 
@@ -697,6 +703,7 @@ def audit(
     exempt: str | None = None,
     kind: str | None = None,
     all_tests: bool = False,
+    dev_pilot: bool = False,
 ) -> dict:
     root = Path(root).resolve()
     kind = kind or detect_repo_kind(root)
@@ -753,7 +760,7 @@ def audit(
         classify_file(kind, path).startswith(("source-", "test-")) or classify_file(kind, path) == "schema"
         for _, path in parsed
     )
-    pr_findings = check_pr_body(pr_body, root, require_mutation=requires_mutation) if pr_body is not None else []
+    pr_findings = check_pr_body(pr_body, root, require_mutation=requires_mutation, dev_pilot=dev_pilot) if pr_body is not None else []
     if exempt:
         for rule in rules:
             if not rule["satisfied"] and rule["level"] == FAIL:
@@ -864,6 +871,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--all-tests", action="store_true", help="diff 없이 레포의 테스트 파일 전부를 스멜 검사 (필수 규칙은 생략)")
     parser.add_argument("--changed-files", type=Path, help="git 대신 사용할 'STATUS path' 목록 파일")
     parser.add_argument("--pr-body", type=Path, help="PR 본문 파일 — 검증 결과 검사")
+    parser.add_argument("--dev-pilot", action="store_true", help="DEV 시범의 대기 검증을 WARN으로 표시 (운영에는 쓰지 않음)")
     parser.add_argument("--exempt", help="면제 사유 — FAIL 규칙을 WARN으로 낮춘다 (test-exempt 라벨)")
     parser.add_argument("--kind", choices=["fe", "admin", "server"], help="레포 종류 강제 지정")
     parser.add_argument("--json", action="store_true", help="JSON 출력")
@@ -878,7 +886,7 @@ def main(argv: list[str] | None = None) -> int:
     pr_body = args.pr_body.read_text(encoding="utf-8") if args.pr_body else None
     head = None if args.working_tree else args.head
     try:
-        report = audit(args.repo, base=args.base, head=head, changed=changed, pr_body=pr_body, exempt=args.exempt, kind=args.kind, all_tests=args.all_tests)
+        report = audit(args.repo, base=args.base, head=head, changed=changed, pr_body=pr_body, exempt=args.exempt, kind=args.kind, all_tests=args.all_tests, dev_pilot=args.dev_pilot)
     except subprocess.CalledProcessError as error:
         print(f"error: git diff 실패 — {error.stderr.strip()}", file=sys.stderr)
         return 2

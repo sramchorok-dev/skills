@@ -2,6 +2,13 @@
 
 적용: `gardenstep`(FE) · `gardenstep_admin` · `gardenstep-server` · `gardenstep-ai`. 확정 2026-09-16, PR 검증 문구 개정 2026-09-21. 정본은 이 파일이며, 각 레포 PR 템플릿과 CI `test-gate`가 이 규칙을 집행한다.
 
+## DEV 시범 적용 범위
+
+DEV의 실행 시점은 `docs/verification-policy.md`와 completion-qa의 DEV fast deployment 절을 따른다.
+테스트 품질 기준은 유지하되 전체 검증을 배포 전에 동기적으로 기다리는 조건으로 삼지 않는다.
+`--dev-pilot`은 PR 본문의 미완료를 WARN으로 드러낸다. 사후 자동 접수 미구현 구간은 명시한다.
+운영 대상은 아래 기존 게이트를 유지한다. 현재 서비스 CI의 needs는 별도 수정 전까지 바뀌지 않는다.
+
 ## 0. 한 줄 원칙
 
 **바뀐 사용자 동작 하나에 사용자 경로 테스트 하나. 계산이 바뀌면 순수 로직 테스트 하나. 둘 다 없는 PR은 리뷰를 시작하지 않는다.**

@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "gardenstep의 Tier2 정원도면 geometry에서 특정 seed가 1㎡를 넘는 버그를 수정하고 DEV 배포까지 끝내줘.",
-      "expected_output": "실패 seed를 먼저 고정한 TC, 경계·다중 seed 행렬, Playwright UI/모바일/콘솔 E2E, lint·build·전체 관련 테스트, PR/CI/DEV 라이브 검증을 증거와 함께 보고하고 production/backend 미배포 범위를 분리한다.",
+      "expected_output": "DEV 대상의 변경·버전을 검토하고 build/deploy/QA 상태를 분리한다. 전체 E2E와 브라우저 결과를 배포 전에 기다리지 않으며 사후 QA의 범위·담당·접수 상태를 남긴다. QA 미완료를 PASS 또는 전체 COMPLETE로 보고하지 않는다.",
       "files": []
     },
     {
@@ -17,6 +17,12 @@
       "id": 3,
       "prompt": "gardenstep과 gardenstep-server 사이 주문 응답 필드를 변경하고 두 PR을 배포해줘.",
       "expected_output": "producer/consumer 계약과 배포 순서를 명시하고 양쪽 TC·build, 실제 주문 E2E, 두 PR의 CI/미해결 리뷰, 대상 환경의 deploy SHA·컨테이너·HTTP/browser smoke까지 각각 검증한다.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "운영 배포 QA를 확인해줘. DEV 사후검증 규칙을 운영에도 적용해도 돼?",
+      "expected_output": "DEV 시범과 운영 기존 게이트를 구분하고 운영의 기존 전체 완료 절차를 유지한다. 별도의 명시적 운영 배포 승인과 변경 전제도 확인한다.",
       "files": []
     }
   ]

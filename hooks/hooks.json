@@ -11,6 +11,15 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/qa_queue_hook.py\"",
+            "timeout": 3
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -64,6 +73,15 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/stop_tests.py\"",
             "timeout": 30
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/qa_queue_hook.py\"",
+            "timeout": 3
           }
         ]
       }

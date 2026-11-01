@@ -6,7 +6,7 @@ type: {{type}}            # feat | fix | refactor | perf | migration | chore | d
 risk: normal          # normal | money | migration | security | infra
 rollback: image       # image | rds-snapshot | config | revert | n/a
 tests: []             # 이 변경을 지키는 테스트 파일 (예: [OrderControllerTest, cart.spec.ts])
-adr: none             # none | docs/decisions/NNNN-....md
+adr: none             # none (기준 1개: 이유) | docs/decisions/NNNN-....md  ← 위험도 높으면 판정을 괄호로 남긴다
 ---
 
 # {{title}}
