@@ -1,0 +1,35 @@
+{
+  "skill_name": "gardenstep-release",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "운영배포 빠르게 준비해줘. 아직 배포하지마.",
+      "expected_output": "read-only plan, 동일 tree/workflow 증거 확인, 실제 배포 없음",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "운영 FE 배포해줘. 로컬 실행기는 없어.",
+      "expected_output": "기존 운영 gate 및 GitHub 경로 사용; 로컬 설치나 테스트 생략을 가정하지 않음",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "AI도 gsdeploy로 운영 올려줘.",
+      "expected_output": "AI 로컬 prod 미지원 설명 후 승인 범위의 production.yml 경로",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "배포 성공했으니 후검증도 완료지?",
+      "expected_output": "배포·자동회귀·실환경/Figma 구분, identity 대조 후 범위별 상태",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "같은 SHA GitHub 배포 중인데 로컬도 시작해.",
+      "expected_output": "중복 실행을 시작하지 않고 실행 중 작업/대체 계획 확인",
+      "files": []
+    }
+  ]
+}
