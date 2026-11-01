@@ -35,6 +35,7 @@ class QueueLinkTest(unittest.TestCase):
    mapping.write_text(json.dumps({'schema_version':1,'rules':[{'paths':['components/*.tsx','docs/qa/local-design-map.json'],'cards':['CASE-01'],'figma_nodes':['1:2'],'viewports':['pc'],'checks':['color']}]}))
    q.git('add','.');q.git('commit','-qm','ui')
    head=q.git('rev-parse','HEAD').strip();task=qa_queue.enqueue(q.root,q.db)
+   qa_queue.assign(q.root,task,'reviewer','2030-01-01T00:00:00Z','https://github.com/sramchorok-dev/gardenstep/issues/1',q.db)
    b.env['revisions']['fe']=head;runpath=b.root/'run2'
    mod.ba.init_run(b.catalog,b.env,runpath,'QA-20261024-02','critical',proof_root=b.root)
    (runpath/'screenshots/one.png').write_bytes(b'\x89PNG\r\n\x1a\nactual screenshot')
@@ -47,6 +48,14 @@ class QueueLinkTest(unittest.TestCase):
    subprocess.run(base+['link-design','--repo',str(q.root),'--id',task,'--receipt',str(receipt)],env=env,text=True,capture_output=True,check=True)
    out=subprocess.run(base+['link-run','--repo',str(q.root),'--id',task,'--run',str(runpath)],env=env,text=True,capture_output=True,check=True)
    self.assertEqual(json.loads(out.stdout)['queue_status'],'PASS')
+   # Python without site packages cannot decode images. This is a local tool
+   # failure, not new evidence that the recorded QA result changed.
+   isolated=subprocess.run(['python3','-S',str(ROOT/'hooks/qa_queue.py'),'status','--repo',str(q.root)],env=env,text=True,capture_output=True,check=True)
+   diagnostic=json.loads(isolated.stdout)[0]
+   self.assertEqual(diagnostic['status'],'PASS')
+   self.assertEqual(diagnostic['verification_status'],'UNVERIFIED')
+   with qa_queue.connect(q.db) as db:
+    self.assertEqual(db.execute('SELECT status FROM tasks WHERE id=?',(task,)).fetchone()[0],'PASS')
    (proof/'actual.png').write_bytes(b'tampered')
    self.assertEqual(qa_queue.tasks(q.root,q.db)[0]['status'],'BLOCKED')
   finally:b.tearDown();q.tearDown()

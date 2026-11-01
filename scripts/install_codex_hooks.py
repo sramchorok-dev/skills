@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shlex
 import tempfile
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 MARKER = 'gardenstep-local-qa-v1'
@@ -15,7 +16,7 @@ def change(path, action):
     data = json.loads(path.read_text()) if path.exists() else {'hooks': {}}
     if not isinstance(data, dict) or not isinstance(data.setdefault('hooks', {}), dict): raise ValueError('invalid hook config')
     hooks = data['hooks']
-    command = ': ' + MARKER + '; python3 ' + shlex.quote(str(ROOT / 'hooks' / 'qa_queue_hook.py'))
+    command = ': ' + MARKER + '; ' + shlex.quote(sys.executable) + ' ' + shlex.quote(str(ROOT / 'hooks' / 'qa_queue_hook.py'))
     for event in ('SessionStart', 'Stop'):
         groups = hooks.setdefault(event, [])
         for group in groups:

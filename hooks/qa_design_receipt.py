@@ -7,8 +7,9 @@ from urllib.parse import urlparse, parse_qs
 import io
 
 class ReceiptError(ValueError): pass
+class ReceiptEnvironmentError(RuntimeError): pass
 
-def validate(path, required_nodes, required_viewports, revision, required_checks=()):
+def validate(path, required_nodes, required_viewports, revision, required_checks=(), required_cells=None):
     path = Path(path).resolve()
     data = json.loads(path.read_text(encoding='utf-8'))
     if data.get('schema_version') != 1 or data.get('revision') != revision:
@@ -32,7 +33,7 @@ def validate(path, required_nodes, required_viewports, revision, required_checks
     except (KeyError, ValueError, TypeError, AttributeError) as exc:
         raise ReceiptError('시간대 포함 시각·Figma 원본 URL·독립 원본 관찰 기록이 필요합니다') from exc
     cells = data.get('cells', [])
-    required={(n,v) for n in required_nodes for v in required_viewports}
+    required={(c['node'],c['viewport']) for c in required_cells} if required_cells is not None else {(n,v) for n in required_nodes for v in required_viewports}
     actual={(c.get('node'),c.get('viewport')) for c in cells}
     if not required or not required.issubset(actual): raise ReceiptError('필요한 Figma 노드/viewport 누락')
     evidence={}
@@ -47,7 +48,8 @@ def validate(path, required_nodes, required_viewports, revision, required_checks
         checks=cell.get('checks')
         if not isinstance(checks,list) or not checks: raise ReceiptError('요소별 대조 내역 누락')
         check_ids = {check.get('item') for check in checks}
-        if not set(required_checks).issubset(check_ids): raise ReceiptError('필수 비교 항목 누락')
+        cell_checks = next((c['checks'] for c in required_cells if (c['node'],c['viewport']) == (cell.get('node'),cell.get('viewport'))), []) if required_cells is not None else required_checks
+        if not set(cell_checks).issubset(check_ids): raise ReceiptError('필수 비교 항목 누락')
         for check in checks:
             if cell['verdict'] == 'MATCH' and check.get('expected') != check.get('actual'):
                 contradictions=True
@@ -66,7 +68,9 @@ def validate(path, required_nodes, required_viewports, revision, required_checks
                     if img.format not in ('PNG', 'JPEG'): raise ValueError('unsupported image format')
                     img.verify()
                 with Image.open(io.BytesIO(content)) as img: img.load()
-            except (ImportError, OSError, ValueError, SyntaxError) as exc:
+            except ImportError as exc:
+                raise ReceiptEnvironmentError('Pillow 미설치: .venv-qa/bin/python으로 재실행하세요. 기존 판정은 보존됩니다.') from exc
+            except (OSError, ValueError, SyntaxError) as exc:
                 raise ReceiptError('PNG/JPEG 디코드 실패 또는 Pillow 미설치') from exc
             evidence[str(file.relative_to(path.parent))]=hashlib.sha256(content).hexdigest()
     return {'receipt':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest(), 'evidence':evidence,

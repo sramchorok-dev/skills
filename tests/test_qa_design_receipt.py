@@ -34,4 +34,20 @@ class DesignReceiptTest(unittest.TestCase):
    cell['verdict']='MISMATCH';path.write_text(json.dumps(data));self.assertEqual(r.validate(path,['1:2'],['pc'],'a'*40)['verdict'],'FAIL')
    (root/'actual.png').unlink()
    with self.assertRaises(r.ReceiptError):r.validate(path,['1:2'],['pc'],'a'*40)
+ def test_rule_specific_cells_keep_their_own_checks(self):
+  with tempfile.TemporaryDirectory() as d:
+   root=Path(d)
+   Image.new('RGB',(2,2),'white').save(root/'figma.png')
+   Image.new('RGB',(2,2),'blue').save(root/'actual.png')
+   cells=[]
+   required=[]
+   for node,viewport,check in [('1:1','pc','color'),('2:2','mobile','text')]:
+    required.append({'node':node,'viewport':viewport,'checks':[check]})
+    cells.append({'node':node,'node_url':'https://figma.com/design/x?node-id='+node.replace(':','-'),'viewport':viewport,'verdict':'MATCH','checks':[{'item':check,'expected':'same','actual':'same'}],'figma_screenshot':'figma.png','actual_screenshot':'actual.png'})
+   data={'schema_version':1,'revision':'a'*40,'observed_at':'2026-10-31T03:00:00Z','source_checked_at':'2026-10-31T02:59:00Z','source_url':'https://figma.com/design/x','source_observer':'reviewer','independent_source_observation':True,'cells':cells}
+   path=root/'receipt.json';path.write_text(json.dumps(data))
+   self.assertEqual(r.validate(path,['1:1','2:2'],['pc','mobile'],'a'*40,['color','text'],required_cells=required)['verdict'],'PASS')
+   cells[1]['checks'][0]['item']='color';path.write_text(json.dumps(data))
+   with self.assertRaises(r.ReceiptError):r.validate(path,[],[],'a'*40,required_cells=required)
+
 if __name__=='__main__': unittest.main()

@@ -87,3 +87,17 @@ python3 -m unittest discover -s tests -v
 ```
 
 hook·스킬·명령을 바꾸면 `.claude-plugin/plugin.json`의 `version`을 올린다. 상세 규약: [CONTRIBUTING.md](CONTRIBUTING.md)
+
+### DEV 로컬 QA 어댑터 (시범)
+
+이 브랜치의 QA 훅은 Claude·Codex 모두 SessionStart/Stop 접수와 인계 알림만 제공한다. Claude 플러그인 전체 가드레일이 Codex에도 설치되는 것은 아니다. 실제 규칙은 [검증 정책](docs/verification-policy.md), 명령·진단·Figma N/A는 [QA 큐 가이드](hooks/QA-QUEUE.md)를 따른다.
+
+```bash
+python3 -m venv .venv-qa
+.venv-qa/bin/python -m pip install -r requirements-qa.txt
+.venv-qa/bin/python scripts/install_claude_hooks.py install
+.venv-qa/bin/python scripts/install_codex_hooks.py install
+.venv-qa/bin/python scripts/qa_doctor.py
+```
+
+기존 플러그인의 QA 훅과 사용자 설정의 QA 훅은 하나만 활성화한다. 설치 디렉터리/venv를 이동하면 재설치한다. Codex는 `/hooks` 신뢰 검토, 두 도구 모두 일반 세션 접수를 확인한다. QA는 담당·기한·팀 PR/issue 링크를 지정하고 인계표를 공유한다. 원격 게시나 Telegram 전송은 위 명령에서 실행하지 않는다.

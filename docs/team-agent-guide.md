@@ -3,7 +3,7 @@
 Gardenstep 레포(`gardenstep`·`gardenstep_admin`·`gardenstep-server`·`gardenstep-ai`)에서 코딩 에이전트와 함께 일하는 규칙.
 결정의 이유는 [ADR](adr/README.md)에 있다.
 
-> DEV 빠른 배포·로컬/사후 QA 정책은 [시범안](verification-policy.md)과 [ADR 0007](adr/0007-dev-fast-deploy-qa-pilot.md)을 따른다. 실제 서비스 CI 게이트 제거 전까지 기존 필수 검사는 유지한다.
+> DEV 빠른 배포·로컬/사후 QA 정책은 [시범안](verification-policy.md)과 [ADR 0007](adr/0007-dev-fast-deploy-qa-pilot.md)을 따른다. DEV 적용 범위·로컬 QA 책임·CLI별 기능 차이는 해당 정책을 기준으로 한다. 운영 필수 검사는 유지한다.
 
 ## 1. 한눈에
 

@@ -31,3 +31,24 @@ Claude는 `hooks/hooks.json`의 SessionStart/Stop에서 실행한다. Codex는 `
 `link-design`은 receipt의 SHA·노드×viewport 범위·출처/조회시각·항목별 기대/실제값·양쪽 비어있지 않은 캡처를 검사하고 파일 해시를 남긴다. 원본/화면 캡처는 receipt와 같은 private 디렉터리 하위에 둔다. `cells`는 node별·viewport별 `node`, `node_url`(같은 Figma 파일의 `node-id` 포함 HTTPS 링크), `viewport`, `verdict`(MATCH/MISMATCH/UNKNOWN), `checks`(각 `item`, `expected`, `actual`), `figma_screenshot`, `actual_screenshot`을 가진다. 최상위 필드는 `schema_version: 1`, `revision`, `source_url`, `source_checked_at`, `observed_at`, `cells`다. 기존 Figma 정본·승인예외·요소 비교 기준은 `gardenstep-qa-run/references/design-parity.md`를 따른다.
 
 이 기록의 MATCH는 사람이 제공한 실제 관찰이며 기계가 스크린샷의 진실성을 보증하지 않는다. screenshot이 생성되었다는 사실만으로 기대값과 동일함을 추론하지 않는다. 각 매핑에서 요구한 checks 전부를 매 node·viewport cell에 기록해야 한다. 원본을 실제로 관찰한 검수자가 source_observer와 independent_source_observation=true를 기록한다. 시간대 포함 ISO 시각, Figma HTTPS URL, PNG/JPEG 전체 디코딩, 파일 및 node-id 일치와 각 셀의 증거를 검사한다. Pillow는 `python3 -m pip install -r requirements-qa.txt`로 설치한다. QA와 Figma 두 영수증이 모두 충족되면 PASS다. 독립 관찰과 스크린샷 진위는 검수자의 증언이며 프로그램이 보증하지 않는다. 출처 미접근·기준 미확정은 BLOCKED다. link-design 이후 link-run을 호출한다.
+
+## 검수 담당·기한과 공유 인계
+
+```bash
+.venv-qa/bin/python hooks/qa_queue.py assign --repo "$QA_REPO" --id "$TASK_ID" \
+  --owner "검수 담당" --due-at "2030-01-01T18:00:00+09:00" \
+  --tracking-url "https://github.com/sramchorok-dev/gardenstep/pull/123"
+.venv-qa/bin/python hooks/qa_queue.py handoff --repo "$QA_REPO"
+```
+
+날짜·링크는 실제 작업에 맞춰 지정한다. handoff 출력을 해당 PR의 검증 섹션에 기록한다. 명령은 원격 게시/메시지 전송을 하지 않는다. 미지정·기한 초과는 SessionStart/Stop에서 안내하며 배포는 차단하지 않는다. PC/세션이 꺼진 동안의 자동 감시는 없다. 중앙 공유 기록은 작성자·검수 담당이 갱신하고 리뷰어가 확인한다. 기본 기한은 DEV 배포 다음 영업일, 변경 시 사유를 공유한다.
+
+`design: "not-applicable"`, `reason: "API 응답 파싱 수정으로 시각 표현 변경 없음"`을 매핑 rule에 넣으면 해당 규칙의 Figma 증거는 생략한다. `cards`와 `viewports`는 필수이며 기능 검수는 남는다. 사유 없는 N/A는 BLOCKED다. 명시하지 않으면 기존처럼 디자인 검수가 필수다. rule별 노드·카드·viewport·checks 관계를 보존한다.
+
+## 실행 환경과 도구 차이
+
+설치·doctor·status·영수증 연결은 같은 `.venv-qa/bin/python`으로 실행한다. 새 installer는 해당 Python 절대 경로를 훅에 기록하므로 설치 디렉터리/venv를 이동한 뒤에는 재설치한다. doctor는 어댑터 존재와 무부작용 self-test를 검사한다. 실제 CLI 신뢰/활성화는 일반 세션에서 별도 확인한다.
+
+Pillow 등 실행환경 문제는 `verification_status: UNVERIFIED`로 표시하고 과거 판정을 덮어쓰지 않는다. 증거 변조/누락은 기존대로 BLOCKED로 내린다. UNVERIFIED를 현재 검증 통과로 보고하지 않는다.
+
+두 CLI에 설치되는 것은 QA 접수 훅이다. Claude 플러그인의 전체 가드레일과 동일한 강제력을 의미하지 않는다. 공통 정책의 필수 검사는 서비스 CI, 로컬 훅은 보조다.
