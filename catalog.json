@@ -24,6 +24,11 @@
       "name": "gardenstep-test-audit",
       "category": "quality",
       "description": "Gardenstep PR의 테스트 코드가 팀 테스트 규칙(E2E 필수·스멜 금지·영수증)을 지키는지 점검·판정"
+    },
+    {
+      "name": "gardenstep-release",
+      "category": "deployment",
+      "description": "DEV·운영 배포 계획, 동일 소스 테스트 재사용 경로와 exact-deployment 후검증 확인"
     }
   ]
 }

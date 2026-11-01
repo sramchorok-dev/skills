@@ -21,6 +21,8 @@
 | [`gardenstep-report-wiki`](skills/gardenstep-report-wiki/) | 보고·공유 | Gardenstep HTML 보고서 공개 DEV Wiki 게시 |
 | [`gardenstep-test-audit`](skills/gardenstep-test-audit/) | 품질 | PR 테스트 코드의 팀 규칙 준수 점검·판정 (E2E 필수, 스멜, 영수증) |
 
+| [`gardenstep-release`](skills/gardenstep-release/) | 배포 | 공용 빠른 배포 절차·운영 테스트 재사용 경로·정확한 배포 ID 후검증 조회 |
+
 ## 설치
 
 **Claude Code** — 플러그인으로 설치한다 (hook + 명령 + 스킬). 레포에 `.claude/settings.json`이 있으면 폴더 신뢰 수락 시 자동 설치된다.
