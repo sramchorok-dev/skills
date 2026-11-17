@@ -1,7 +1,7 @@
 {
   "name": "gardenstep-team",
-  "version": "0.5.0",
-  "description": "Gardenstep 팀 SDLC: intent/spec/plan, 독립 리뷰, DEV 증거 계약, 로컬 가드레일과 QA 스킬",
+  "version": "0.6.0",
+  "description": "Gardenstep 팀 SDLC: GitHub 승인 기록, intent/spec/plan, 독립 리뷰, CI·DEV 증거와 새 프로젝트 구축",
   "author": {
     "name": "sramchorok-dev"
   },

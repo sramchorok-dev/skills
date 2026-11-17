@@ -15,6 +15,7 @@
 
 | 스킬 | 분야 | 용도 |
 |---|---|---|
+| [`ai-native-sdlc-bootstrap`](skills/ai-native-sdlc-bootstrap/) | 개발 체계 | 새 프로젝트 구축·기존 팀 전환, 인터뷰·비파괴 생성기·검증 |
 | [`gardenstep-sdlc`](skills/gardenstep-sdlc/) | 품질 | intent/spec/plan·독립 리뷰·출처/실제 DEV 증거 계약 검사 (local-validation-only) |
 | [`gardenstep-change-log`](skills/gardenstep-change-log/) | 품질 | PR마다 `docs/changes/` 변경기록(날짜·무엇·왜) 생성·검사, ADR 필요 판정 |
 | [`gardenstep-completion-qa`](skills/gardenstep-completion-qa/) | 품질 | 변경 동작별 TC·빌드·E2E·라이브 증거로 완료 판정 |
@@ -66,7 +67,7 @@ python3 ~/.agents/skills/gardenstep-test-audit/scripts/audit_tests.py --repo . -
 python3 ~/.agents/skills/gardenstep-test-audit/scripts/audit_tests.py --repo . --all-tests                    # 기존 테스트 전체 스멜
 ```
 
-팀 SDLC 정책: [docs/sdlc/README.md](docs/sdlc/README.md). 설치 성공·로컬 검사 PASS는 인증된 승인 또는 실제 DEV 검증이 아니다.
+팀 SDLC 정책: [docs/sdlc/README.md](docs/sdlc/README.md). 설치 성공·로컬 검사 PASS는 사람 승인 또는 실제 DEV 검증이 아니다. 별도 승인 서버 없이 GitHub 기록·CI·사람의 운영 승인으로 진행한다.
 
 테스트 기술 매트릭스: [skills/gardenstep-test-audit/references/testing-policy.md](skills/gardenstep-test-audit/references/testing-policy.md)
 

@@ -174,7 +174,7 @@ def validate_bundle(manifest, evidence, policy):
             if check.get("environment") != "dev" or check.get("services_before") != manifest["services"] or check.get("services_after") != manifest["services"]:
                 errors.append(f"{ident}: actual DEV service identity missing or changed")
     return outcome(errors, manifest_sha256=digest,
-                   limitations=["Input consistency only; authenticate policy, execution identity, raw artifacts and human approvals in the control service."])
+                   limitations=["Input consistency only; compare the approved policy, actual GitHub run/artifacts and human approval records independently."])
 
 
 def doctor(evidence):
@@ -206,7 +206,7 @@ def doctor(evidence):
                             "authentication": row["authentication"]["status"],
                             "read": row["read"]["status"], "ready_claim": not failures})
     return outcome(errors, sources=results,
-                   limitations=["No connectors or credentials are inspected. Only supplied observation records are checked; their authenticity and freshness require server verification."])
+                   limitations=["No connectors or credentials are inspected. Only supplied observation records are checked; their authenticity and freshness require actual connector/browser checks."])
 
 
 def repository(repo):

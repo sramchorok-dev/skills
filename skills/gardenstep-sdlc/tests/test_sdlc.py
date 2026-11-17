@@ -238,13 +238,24 @@ class RepositoryContractTest(unittest.TestCase):
             (root / "docs").mkdir()
             for path in ["CLAUDE.md", "AGENTS.md", "REVIEW.md", "docs/testing.md"]:
                 (root / path).write_text("synthetic contract\n")
-            config = {"schema_version": 1, "repository": "example/service", "policy_version": "sdlc-v1",
-                      "harness_revision": "a" * 40, "change_home": "example/work", "control_repository": "example/control",
+            config = {"schema_version": 2, "repository": "example/service", "policy_version": "sdlc-github-v2",
+                      "harness_revision": "a" * 40, "change_home": "example/work", "approval_mode": "github-recorded",
                       "verification": {"test_commands": ["touch unexpected"], "eval_commands": [],
                                        "dev_verification": "BLOCKED: unconfigured", "limitations": ["synthetic"]}}
             (root / ".sdlc/repository.json").write_text(json.dumps(config))
             self.assertEqual("PASS", sdlc.repository(root)["status"])
             self.assertFalse((root / "unexpected").exists())
+            # The agreed process is usable without a control service.
+            self.assertNotIn("control_repository", config)
+            config["approval_mode"] = "pretend-server-enforced"
+            (root / ".sdlc/repository.json").write_text(json.dumps(config))
+            self.assertEqual("FAIL", sdlc.repository(root)["status"])
+            config["approval_mode"] = "github-recorded"
+            config["control_repository"] = "example/control"
+            (root / ".sdlc/repository.json").write_text(json.dumps(config))
+            self.assertEqual("FAIL", sdlc.repository(root)["status"])
+            del config["control_repository"]
+            (root / ".sdlc/repository.json").write_text(json.dumps(config))
             (root / "REVIEW.md").unlink()
             self.assertEqual("FAIL", sdlc.repository(root)["status"])
 
