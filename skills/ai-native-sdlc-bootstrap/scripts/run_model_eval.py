@@ -38,13 +38,18 @@ def comparison_valid(pair):
 
 
 def run_one(case, mode, workspace, plugin, output):
-    command = CLI + ['-p', case['prompt'], '--tools', 'Skill', '--allowedTools', 'Skill',
+    command = CLI + ['-p', case['prompt'], '--tools', 'Skill' if mode == 'with_skill' else '',
+                     '--allowedTools', 'Skill' if mode == 'with_skill' else '',
                      '--permission-mode', 'dontAsk', '--setting-sources', '',
                      '--settings', '{"disableAllHooks":true}', '--strict-mcp-config',
                      '--mcp-config', '{"mcpServers":{}}', '--no-chrome', '--no-session-persistence',
                      '--system-prompt', SYSTEM, '--output-format', 'stream-json', '--verbose']
     if mode == 'with_skill':
         command += ['--plugin-dir', str(plugin)]
+    else:
+        # The user may already have installed this skill globally. Disable skill
+        # discovery and tools for the baseline instead of letting it load that copy.
+        command += ['--disable-slash-commands']
     key = f"case-{case['id']}-{mode}"
     raw = output / f'{key}.jsonl'
     try:
