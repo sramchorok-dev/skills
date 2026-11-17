@@ -158,9 +158,13 @@ def validate_bundle(manifest, evidence, policy):
             errors.append(f"{ident}: reversed timestamps")
         model = check["model"]
         if check["kind"] in {"eval", "review"} and any(
-                model[k].lower() in {"unknown", "none", "n/a", "not-applicable", "deterministic"}
+                model[k].strip().lower() in {"unknown", "none", "n/a", "not-applicable", "deterministic"}
                 for k in ("name", "version", "prompt_version")):
             errors.append(f"{ident}: model and prompt version required")
+        if check["kind"] in {"eval", "review"} and any(
+                model[k].strip().lower() in {"unknown", "none", "n/a", "not-applicable"}
+                for k in ("judge_name", "judge_version")):
+            errors.append(f"{ident}: judge identity and version required")
         if check["kind"] == "review":
             if not text_value(check.get("reviewer_session_id")) or check.get("reviewer_session_id") == manifest["author_session_id"]:
                 errors.append(f"{ident}: review session is not independent")

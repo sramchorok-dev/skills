@@ -158,6 +158,14 @@ class EvidenceContractTest(unittest.TestCase):
         self.bundle["evidence"]["checks"][1]["model"]["version"] = "unknown"
         self.assert_rejected()
 
+    def test_unknown_judge_identity_cannot_pass_review(self):
+        for field in ("judge_name", "judge_version"):
+            for value in ("unknown", " unknown ", "none", "n/a", "not-applicable"):
+                with self.subTest(field=field, value=value):
+                    self.setUp()
+                    self.bundle["evidence"]["checks"][1]["model"][field] = value
+                    self.assert_rejected()
+
     def test_malformed_document_fails_without_traceback(self):
         self.assertEqual("FAIL", sdlc.validate_bundle([], {}, {})["status"])
 

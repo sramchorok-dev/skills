@@ -30,3 +30,7 @@ adr: none
 - 실제 Claude Skill 호출 5개 확인. 첫 정책 평가 3/5에서 사람 본인승인 오독을 발견해 본문 보강; 본문 보강 후 재평가 5/5 통과. 합성 5사례이며 실제 업무 20~50개 corpus나 DEV 검증을 대체하지 않음.
 - test-audit 스크립트 PASS이나 repo_kind=unknown으로 정책 매트릭스 적용 없음. 위 Python 단위·mutation 검증으로 보완.
 - 실제 공용 승인 서버/팀원별 인증/실제 DEV/운영 검증은 이 패키지 검사로 수행하지 않았다.
+
+### 독립 리뷰 후 보완
+
+judge 이름·버전이 unknown인 평가가 통과하던 결함을 수정했다. unknown/none/n-a/not-applicable와 앞뒤 공백 사례를 실패로 재현한 뒤 공용 검사기 32개 회귀 통과. 모델·프롬프트 placeholder도 공백을 정규화해 판정한다.
