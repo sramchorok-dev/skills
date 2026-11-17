@@ -20,6 +20,23 @@ SYSTEM = ('This is a synthetic planning evaluation. Answer the supplied task in 
           'No deployment, account access, credential lookup or external communication is authorized.')
 
 
+def skill_load_succeeded(events):
+    blocks = [b for e in events for b in e.get('message', {}).get('content', []) if isinstance(b, dict)]
+    calls = [b for b in blocks if b.get('type') == 'tool_use']
+    expected = [c for c in calls if c.get('name') == 'Skill' and
+                c.get('input', {}).get('skill') == 'bootstrap-eval:ai-native-sdlc-bootstrap']
+    results = {b.get('tool_use_id'): b for b in blocks if b.get('type') == 'tool_result'}
+    return (len(expected) == 1 and bool(expected[0].get('id')) and
+            expected[0]['id'] in results and not results[expected[0]['id']].get('is_error', False) and
+            all(c.get('name') == 'Skill' for c in calls))
+
+
+def comparison_valid(pair):
+    return (len(pair) == 2 and all(r.get('execution') == 'PASS' and r.get('model_versions') and
+            r.get('session_id') for r in pair) and pair[0]['model_versions'] == pair[1]['model_versions'] and
+            pair[0]['session_id'] != pair[1]['session_id'])
+
+
 def run_one(case, mode, workspace, plugin, output):
     command = CLI + ['-p', case['prompt'], '--tools', 'Skill', '--allowedTools', 'Skill',
                      '--permission-mode', 'dontAsk', '--setting-sources', '',
@@ -43,8 +60,9 @@ def run_one(case, mode, workspace, plugin, output):
         final = next((e for e in reversed(events) if e.get('type') == 'result'), {})
         calls = [b for e in events for b in e.get('message', {}).get('content', [])
                  if isinstance(b, dict) and b.get('type') == 'tool_use']
-        loaded = any(c.get('name') == 'Skill' and c.get('input', {}).get('skill', '').endswith('ai-native-sdlc-bootstrap') for c in calls)
-        operational_pass = result.returncode == 0 and not final.get('is_error', True) and (loaded if mode == 'with_skill' else not loaded)
+        loaded = skill_load_succeeded(events)
+        operational_pass = (result.returncode == 0 and not final.get('is_error', True) and bool(final.get('session_id')) and
+                            bool(final.get('modelUsage')) and (loaded if mode == 'with_skill' else not calls))
         answer = final.get('result', '')
         (output / f'{key}.md').write_text(answer + '\n')
         return {'case_id': case['id'], 'mode': mode, 'execution': 'PASS' if operational_pass else 'FAIL',
@@ -73,7 +91,10 @@ def main():
         with ThreadPoolExecutor(max_workers=2) as pool:
             for case in cases:
                 pair = [pool.submit(run_one, case, mode, workspace, plugin, args.output) for mode in ['with_skill', 'without_skill']]
-                runs.extend(f.result() for f in pair)
+                pair_results = [f.result() for f in pair]
+                for result in pair_results:
+                    result['comparison_valid'] = comparison_valid(pair_results)
+                runs.extend(pair_results)
     report = {'observed_at': datetime.now(timezone.utc).isoformat(), 'cli': '2.1.326',
               'scope': 'Three synthetic planning prompts, paired once; not an action or installation benchmark',
               'skill_sha256': hashlib.sha256((SKILL / 'SKILL.md').read_bytes()).hexdigest(),
@@ -83,7 +104,7 @@ def main():
     cards = ''.join('<article><h2>Case '+str(r['case_id'])+' / '+r['mode']+'</h2><p>Execution: '+r['execution']+'; grading pending</p><pre>'+html.escape(r.get('answer', r.get('reason', '')))+'</pre></article>' for r in runs)
     (args.output / 'review.html').write_text('<!doctype html><meta charset="utf-8"><title>SDLC bootstrap paired evaluation</title><style>body{font:16px system-ui;max-width:1100px;margin:40px auto;padding:0 20px}article{border-top:1px solid #ccc;padding:20px 0}pre{white-space:pre-wrap;font:inherit;line-height:1.6}</style><h1>SDLC bootstrap paired evaluation</h1><p>Draft review: rubric grading pending. Synthetic inputs only.</p>'+cards)
     print(json.dumps({'output': str(args.output), 'executions': [{k:r.get(k) for k in ['case_id','mode','execution','skill_loaded','model_versions']} for r in runs]}, ensure_ascii=False))
-    return 0 if all(r['execution'] == 'PASS' for r in runs) else 1
+    return 0 if all(r['execution'] == 'PASS' and r.get('comparison_valid') for r in runs) else 1
 
 if __name__ == '__main__':
     raise SystemExit(main())
