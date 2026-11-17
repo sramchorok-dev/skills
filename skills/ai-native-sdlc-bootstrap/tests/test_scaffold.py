@@ -145,7 +145,7 @@ class ScaffoldTest(unittest.TestCase):
         self.run_scaffold(True)
         tests = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests/sdlc", "-v"], cwd=self.root, capture_output=True, text=True)
         self.assertEqual(0, tests.returncode, tests.stderr)
-        self.assertIn("Ran 9 tests", tests.stderr)
+        self.assertIn("Ran 15 tests", tests.stderr)
         gate = subprocess.run([sys.executable, "scripts/sdlc/check_change.py", "--root", ".", "--change", "docs/changes/2026-01-01-sdlc"], cwd=self.root, capture_output=True, text=True)
         self.assertEqual(1, gate.returncode)
         self.assertEqual("static-mapping-only", json.loads(gate.stdout)["authority"])

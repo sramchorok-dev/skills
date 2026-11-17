@@ -56,6 +56,36 @@ class ChangeGateTest(unittest.TestCase):
         (self.change / "spec.md").write_text("## R1: first\n## R1: duplicate\n")
         self.assertTrue(self.check())
 
+    def test_empty_heading_cannot_consume_next_unmapped_requirement(self):
+        (self.change / "spec.md").write_text("## R1:\n## R2: A signed-in user can read a result\n")
+        self.assertTrue(self.check())
+
+    def test_empty_heading_with_blank_line_cannot_consume_next_requirement(self):
+        (self.change / "spec.md").write_text("## R1: \t\n\n## R2: A signed-in user can read a result\n")
+        self.assertTrue(self.check())
+
+    def test_malformed_requirement_heading_is_not_silently_ignored(self):
+        for heading in ("## R2:", "## R2: \t", "## R2 missing colon", "## R0: invalid", "## R02: invalid", "## R-2: invalid", "## r2: invalid", "### R2: wrong level", "##R2: missing space"):
+            with self.subTest(heading=heading):
+                (self.change / "spec.md").write_text("## R1: A signed-in user can read a result\n" + heading + "\n")
+                self.assertTrue(self.check())
+
+    def test_crlf_headings_each_need_a_mapping(self):
+        (self.change / "spec.md").write_bytes(b"## R1: first\r\n## R2: second\r\n")
+        self.assertTrue(self.check())
+        self.mapping["requirements"].append({"id": "R2", "verification": "manual", "owner": "reviewer", "reason": "Second requirement"})
+        self.assertEqual([], self.check())
+
+    def test_horizontal_spaces_and_tabs_are_accepted(self):
+        for heading in ("## R1:  A result", "##\tR1:\tA result", "##  R1: \t A result"):
+            with self.subTest(heading=heading):
+                (self.change / "spec.md").write_text(heading + "\n")
+                self.assertEqual([], self.check())
+
+    def test_crlf_empty_heading_is_rejected(self):
+        (self.change / "spec.md").write_bytes(b"## R1:\r\n\r\n## R2: second\r\n")
+        self.assertTrue(self.check())
+
     def test_draft_placeholders_fail(self):
         (self.change / "plan.md").write_text("TODO: verification\n")
         self.assertTrue(self.check())

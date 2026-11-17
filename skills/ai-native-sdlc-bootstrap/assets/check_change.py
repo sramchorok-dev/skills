@@ -39,7 +39,14 @@ def validate(root: Path, change: str) -> list[str]:
             raise InvalidRecord("intent/spec/plan must all contain text")
         if re.search(r"\b(?:TODO|TBD|REPLACE_ME)\b", texts["spec"] + texts["plan"]):
             raise InvalidRecord("spec/plan still contains draft placeholders")
-        requirements = re.findall(r"^## (R[1-9][0-9]*):\s+\S.*$", texts["spec"], re.MULTILINE)
+        requirements = []
+        for line_number, line in enumerate(texts["spec"].splitlines(), 1):
+            if not re.match(r"^[ \t]*#+[ \t]*[Rr](?:[0-9+-]|[ \t]*:)", line):
+                continue
+            heading = re.fullmatch(r"##[ \t]+(R[1-9][0-9]*):[ \t]+\S.*", line)
+            if heading is None:
+                raise InvalidRecord(f"spec line {line_number}: malformed or empty requirement heading")
+            requirements.append(heading.group(1))
         if not requirements or len(set(requirements)) != len(requirements):
             raise InvalidRecord("spec needs unique '## R1: observable requirement' headings")
         mapping = json.loads(beneath(root, f"{change}/checks.json").read_text(encoding="utf-8"))
