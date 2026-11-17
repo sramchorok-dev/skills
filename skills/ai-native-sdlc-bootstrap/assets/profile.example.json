@@ -1,0 +1,20 @@
+{
+  "project": "example-project",
+  "mode": "migration",
+  "maturity": "team",
+  "members": [
+    {"id": "owner-a", "approvals": ["intent", "spec", "plan", "production"]},
+    {"id": "owner-b", "approvals": ["intent", "spec", "plan", "production"]}
+  ],
+  "human_peer_review": "optional",
+  "agent_review": "separate-session-same-model-allowed",
+  "primary_tool": "claude-code",
+  "additional_tools": ["codex"],
+  "canonical_records": "this repository: docs/changes",
+  "repositories": ["web", "api"],
+  "sources": [
+    {"provider": "notion", "locator": "REPLACE_WITH_ALLOWED_PAGE", "scope": "REPLACE_WITH_ALLOWED_SCOPE", "owner": "owner-a"}
+  ],
+  "subscription_policy": "keep-current",
+  "new_monthly_cost_limit": 0
+}
