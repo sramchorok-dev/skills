@@ -33,6 +33,16 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "matcher": "mcp__.*(figma|notion|dropbox|telegram).*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_sources.py\"",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PostToolUse": [

@@ -1,0 +1,9 @@
+---
+description: 작업을 intent→spec→plan으로 연결하고 독립 리뷰·DEV 증거를 확인한다. 로컬 PASS는 승인으로 취급하지 않는다.
+argument-hint: "<Change-ID 또는 작업 요청>"
+---
+
+`gardenstep-sdlc` 스킬을 읽고 `$ARGUMENTS`의 작업을 진행한다.
+먼저 기존 GitHub 작업과 승인된 문서를 확인하고 이미 승인된 단계를 되묻지 않는다.
+자료 누락·충돌은 드러내며 구현·검증·인계까지 이어간다. 독립 리뷰는 새 세션으로 실행한다.
+로컬 검사 성공을 DEV 완료나 운영 승인으로 보고하지 않는다. GitHub의 실제 승인 기록과 CI 증거를 확인한다. 별도 control 서버·passkey는 요구하지 않는다.

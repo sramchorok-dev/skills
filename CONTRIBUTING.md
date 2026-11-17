@@ -23,6 +23,8 @@ compatibility: 선택 사항
 
 ## 플러그인 (hook·명령)
 
+새 팀 정책은 `docs/sdlc/README.md`다. 기존 client hook의 fail-open은 서버 승인/검증의 fail-closed 계약이 아니다. 실제 권한 경계를 대신하지 않는다.
+
 - hook 스크립트는 `hooks/`, 배선은 `hooks/hooks.json`, 슬래시 명령은 `commands/*.md`(frontmatter `description` 필수).
 - 정책(docs/adr/0002): 편집 도구는 보호 파일만 `deny`, Bash는 `deny` 없이 `ask`. hook은 예외가 나도 작업을 막지 않는다(exit 0).
 - 동작 테스트는 `tests/test_hooks.py`에 JSON stdin → 결정 출력 형태로 추가한다. 막아야 할 것과 막지 말아야 할 것을 함께 쓴다.

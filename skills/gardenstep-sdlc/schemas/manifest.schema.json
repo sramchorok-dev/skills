@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Gardenstep SDLC v1 manifest",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "change_id": {
+      "type": "string"
+    },
+    "document_hashes": {
+      "type": "object",
+      "properties": {
+        "intent": {
+          "type": "string",
+          "pattern": "[0-9a-f]{64}"
+        },
+        "spec": {
+          "type": "string",
+          "pattern": "[0-9a-f]{64}"
+        },
+        "plan": {
+          "type": "string",
+          "pattern": "[0-9a-f]{64}"
+        }
+      },
+      "required": [
+        "intent",
+        "spec",
+        "plan"
+      ],
+      "additionalProperties": false
+    },
+    "services": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "[0-9a-f]{40}"
+      },
+      "minProperties": 1
+    },
+    "harness_version": {
+      "type": "string"
+    },
+    "author_session_id": {
+      "type": "string"
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "source_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "check_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "source_ids",
+          "check_ids"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "uniqueItems": false
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "telegram",
+              "figma",
+              "dropbox",
+              "notion",
+              "github",
+              "interview"
+            ]
+          },
+          "revision": {
+            "type": "string"
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "content_sha256": {
+            "type": "string",
+            "pattern": "[0-9a-f]{64}"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "revision",
+          "observed_at",
+          "content_sha256"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "uniqueItems": false
+    },
+    "required_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "test",
+              "eval",
+              "dev",
+              "review"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "uniqueItems": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "change_id",
+    "document_hashes",
+    "services",
+    "harness_version",
+    "author_session_id",
+    "requirements",
+    "sources",
+    "required_checks"
+  ],
+  "additionalProperties": false
+}

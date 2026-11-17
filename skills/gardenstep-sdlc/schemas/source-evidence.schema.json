@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Gardenstep SDLC v1 source-evidence",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "observer_id": {
+      "type": "string"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "telegram",
+              "figma",
+              "dropbox",
+              "notion"
+            ]
+          },
+          "installation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "PASS",
+                  "FAIL",
+                  "BLOCKED",
+                  "NOT_RUN",
+                  "SKIPPED",
+                  "CANCELLED"
+                ]
+              },
+              "connector": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "connector",
+              "version"
+            ],
+            "additionalProperties": false
+          },
+          "authentication": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "PASS",
+                  "FAIL",
+                  "BLOCKED",
+                  "NOT_RUN",
+                  "SKIPPED",
+                  "CANCELLED"
+                ]
+              },
+              "account_ref": {
+                "type": "string"
+              },
+              "checked_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "status",
+              "account_ref",
+              "checked_at"
+            ],
+            "additionalProperties": false
+          },
+          "read": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "PASS",
+                  "FAIL",
+                  "BLOCKED",
+                  "NOT_RUN",
+                  "SKIPPED",
+                  "CANCELLED"
+                ]
+              },
+              "complete": {
+                "type": "boolean"
+              },
+              "missing_parts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 0,
+                "uniqueItems": false
+              },
+              "revision": {
+                "type": "string"
+              },
+              "content_sha256": {
+                "type": "string",
+                "pattern": "[0-9a-f]{64}"
+              },
+              "artifact_uri": {
+                "type": "string"
+              },
+              "observed_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "status",
+              "complete",
+              "missing_parts"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "installation",
+          "authentication",
+          "read"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "uniqueItems": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "observer_id",
+    "sources"
+  ],
+  "additionalProperties": false
+}

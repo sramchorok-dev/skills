@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Gardenstep SDLC v2 repository",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 2
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"
+    },
+    "policy_version": {
+      "type": "string",
+      "const": "sdlc-github-v2"
+    },
+    "harness_revision": {
+      "type": "string",
+      "pattern": "[0-9a-f]{40}"
+    },
+    "change_home": {
+      "type": "string"
+    },
+    "verification": {
+      "type": "object",
+      "properties": {
+        "test_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "uniqueItems": false
+        },
+        "eval_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0,
+          "uniqueItems": false
+        },
+        "dev_verification": {
+          "type": "string"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0,
+          "uniqueItems": false
+        }
+      },
+      "required": [
+        "test_commands",
+        "eval_commands",
+        "dev_verification",
+        "limitations"
+      ],
+      "additionalProperties": false
+    },
+    "approval_mode": {
+      "type": "string",
+      "const": "github-recorded"
+    }
+  },
+  "required": [
+    "schema_version",
+    "repository",
+    "policy_version",
+    "harness_revision",
+    "change_home",
+    "approval_mode",
+    "verification"
+  ],
+  "additionalProperties": false
+}

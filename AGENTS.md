@@ -2,6 +2,8 @@
 
 이 저장소는 sramchorok-dev의 업무 생산성용 공통 Agent 스킬 모음이다.
 
+새 팀 정책은 `docs/sdlc/README.md`. 기존 승인자 독점·상호 사람리뷰 규칙보다 우선한다.
+
 ## 작업 원칙
 
 - `skills/<name>/SKILL.md`를 스킬 정본으로 사용한다.

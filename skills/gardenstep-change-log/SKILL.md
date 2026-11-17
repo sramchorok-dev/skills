@@ -6,6 +6,8 @@ compatibility: Python 3.10+, git. 각 서비스 레포 디렉터리에서 실행
 
 # Gardenstep 변경기록
 
+새 `.sdlc/repository.json` 적용 작업은 `gardenstep-sdlc`의 intent/spec/plan을 정본으로 사용한다. 기존 change-gate가 남은 전환 기간에는 이 기록에 Change-ID 문서 링크만 연결하고 요청 이유를 중복 재작성하지 않는다.
+
 PR 하나 = 기록 파일 하나. 파일명이 `날짜-브랜치`라 두 PR이 같은 파일을 건드리지 않고, squash 머지 뒤에도
 트리에 남는다. 형식 결정: skills 저장소 `docs/adr/0003-change-record-per-pr.md`.
 

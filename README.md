@@ -8,13 +8,15 @@
 |---|---|---|
 | 팀 가이드 | [docs/team-agent-guide.md](docs/team-agent-guide.md) | 에이전트 코딩 규칙 전체 — **처음이면 여기부터** |
 | 팀 ADR | [docs/adr/](docs/adr/README.md) | 팀 공통 결정 (꼭 필요한 것만) |
-| Claude Code 플러그인 `gardenstep-team` | `.claude-plugin/`, `hooks/`, `commands/` | 가드레일 hook, `/ship-pr`, `/hook-stats`, 아래 스킬 |
+| Claude Code 플러그인 `gardenstep-team` | `.claude-plugin/`, `hooks/`, `commands/` | 가드레일 hook, `/sdlc`, `/ship-pr`, `/hook-stats`, 독립 reviewer, 아래 스킬 |
 | 레포 적용 템플릿 | [templates/repo/](templates/repo/) | AGENTS.md, `.claude/settings.json`, PR 템플릿, CI(change-gate, AI 리뷰) |
 
 ## 스킬 목록
 
 | 스킬 | 분야 | 용도 |
 |---|---|---|
+| [`ai-native-sdlc-bootstrap`](skills/ai-native-sdlc-bootstrap/) | 개발 체계 | 새 프로젝트 구축·기존 팀 전환, 인터뷰·비파괴 생성기·검증 |
+| [`gardenstep-sdlc`](skills/gardenstep-sdlc/) | 품질 | intent/spec/plan·독립 리뷰·출처/실제 DEV 증거 계약 검사 (local-validation-only) |
 | [`gardenstep-change-log`](skills/gardenstep-change-log/) | 품질 | PR마다 `docs/changes/` 변경기록(날짜·무엇·왜) 생성·검사, ADR 필요 판정 |
 | [`gardenstep-completion-qa`](skills/gardenstep-completion-qa/) | 품질 | 변경 동작별 TC·빌드·E2E·라이브 증거로 완료 판정 |
 | [`gardenstep-qa-run`](skills/gardenstep-qa-run/) | 품질 | 수동 browser-use E2E·시트 TC·Figma 일치 검증: 버전 카드·항목 증거·재개·커버리지·정리 기록 |
@@ -65,7 +67,9 @@ python3 ~/.agents/skills/gardenstep-test-audit/scripts/audit_tests.py --repo . -
 python3 ~/.agents/skills/gardenstep-test-audit/scripts/audit_tests.py --repo . --all-tests                    # 기존 테스트 전체 스멜
 ```
 
-팀 테스트 규칙 정본: [skills/gardenstep-test-audit/references/testing-policy.md](skills/gardenstep-test-audit/references/testing-policy.md)
+팀 SDLC 정책: [docs/sdlc/README.md](docs/sdlc/README.md). 설치 성공·로컬 검사 PASS는 사람 승인 또는 실제 DEV 검증이 아니다. 별도 승인 서버 없이 GitHub 기록·CI·사람의 운영 승인으로 진행한다.
+
+테스트 기술 매트릭스: [skills/gardenstep-test-audit/references/testing-policy.md](skills/gardenstep-test-audit/references/testing-policy.md)
 
 ## 새 스킬 추가
 

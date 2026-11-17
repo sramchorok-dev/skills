@@ -1,7 +1,7 @@
 {
   "name": "gardenstep-team",
-  "version": "0.4.2",
-  "description": "Gardenstep 팀 에이전트 규칙: 가드레일 hook, PR 게이트(/ship-pr), 테스트 점검·변경기록·완료 QA·DEV QA 실행 스킬",
+  "version": "0.6.0",
+  "description": "Gardenstep 팀 SDLC: GitHub 승인 기록, intent/spec/plan, 독립 리뷰, CI·DEV 증거와 새 프로젝트 구축",
   "author": {
     "name": "sramchorok-dev"
   },

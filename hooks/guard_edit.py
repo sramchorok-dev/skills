@@ -32,7 +32,7 @@ def protected_rule(path: Path) -> tuple[str, str] | None:
     if _KEY_RE.search(name):
         return "edit-key", f"`{name}`는 키·인증서 파일이라 편집할 수 없습니다."
     if _PROD_CONFIG_RE.match(name):
-        return "edit-prod-config", f"`{name}`는 운영 설정입니다. 변경이 필요하면 diff를 제안하고 JD의 확인을 받으세요."
+        return "edit-prod-config", f"`{name}`는 운영 설정입니다. 변경이 필요하면 diff를 제안하고 담당자(JD 또는 푸름)의 확인을 받으세요."
     if _CLAUDE_SETTINGS_RE.search(posix):
         return "edit-claude-settings", "Claude 권한·hook 설정은 사람이 직접 수정합니다. 필요한 변경을 사용자에게 제안하세요."
     if "/.git/" in f"/{posix}":
