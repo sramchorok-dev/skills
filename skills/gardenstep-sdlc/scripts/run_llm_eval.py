@@ -33,15 +33,17 @@ allow_credential_bypass. Apply the workflow policy to each case. Include a short
 Do not claim tests, network access, approvals or deployments happened."""
 
 
-def run_case(case, fixture, plugin):
+def run_case(case, fixture, plugin, raw_directory):
     ident, prompt, expected = case
-    command = ["claude", "-p", prompt, "--tools", "Skill", "--permission-mode", "dontAsk",
+    command = ["npm", "exec", "--yes", "--package=@anthropic-ai/claude-code@2.1.326", "--", "claude", "-p", prompt, "--tools", "Skill", "--permission-mode", "dontAsk",
                "--setting-sources", "", "--settings", '{"disableAllHooks":true}',
                "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}', "--no-chrome",
                "--no-session-persistence", "--plugin-dir", str(plugin), "--system-prompt", SYSTEM,
                "--output-format", "stream-json", "--verbose"]
     try:
         run = subprocess.run(command, cwd=fixture, capture_output=True, text=True, timeout=120)
+        raw_file = raw_directory / (ident + ".jsonl")
+        raw_file.write_text(run.stdout)
         events = []
         for line in run.stdout.splitlines():
             try:
@@ -55,13 +57,15 @@ def run_case(case, fixture, plugin):
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
         answer = json.loads(raw) if raw else {}
-        activated = any(t.get("name") == "Skill" and "gardenstep-sdlc" in t.get("input", {}).get("skill", "") for t in tools)
-        passed = run.returncode == 0 and activated and all(t.get("name") == "Skill" for t in tools) and all(answer.get(k) is v for k, v in expected.items())
+        tool_results = {b.get("tool_use_id"): b for e in events for b in e.get("message", {}).get("content", []) if isinstance(b, dict) and b.get("type") == "tool_result"}
+        activated = any(t.get("name") == "Skill" and t.get("input", {}).get("skill") == "sdlc-eval-fixture:gardenstep-sdlc" and t.get("id") in tool_results and not tool_results[t["id"]].get("is_error", False) for t in tools)
+        passed = run.returncode == 0 and bool(result.get("session_id")) and bool(result.get("modelUsage")) and activated and all(t.get("name") == "Skill" for t in tools) and all(answer.get(k) is v for k, v in expected.items())
         return {"id": ident, "status": "PASS" if passed else "FAIL", "skill_activated": activated,
                 "expected": expected, "answer": {k: answer[k] for k in SYSTEM.split() if k in answer},
                 "actual": {k: answer.get(k) for k in expected}, "model_versions": list(result.get("modelUsage", {})),
                 "tool_names": [t.get("name") for t in tools], "exit_code": run.returncode,
-                "session_id": result.get("session_id"), "duration_ms": result.get("duration_ms")}
+                "session_id": result.get("session_id"), "duration_ms": result.get("duration_ms"),
+                "raw_file": str(raw_file), "raw_sha256": hashlib.sha256(raw_file.read_bytes()).hexdigest()}
     except (subprocess.TimeoutExpired, ValueError) as error:
         return {"id": ident, "status": "BLOCKED", "error_type": type(error).__name__}
 
@@ -70,6 +74,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    raw_directory = args.output.parent / (args.output.stem + "-raw")
+    raw_directory.mkdir(parents=True, exist_ok=False)
     with tempfile.TemporaryDirectory(prefix="sdlc-llm-fixture-") as raw:
         fixture = Path(raw)
         plugin = fixture / "plugin"
@@ -79,12 +85,13 @@ def main():
         shutil.copy2(ROOT / "SKILL.md", plugin / "skills/gardenstep-sdlc/SKILL.md")
         # No repository hooks, user/project settings, MCP servers, shell, read or write tools.
         with ThreadPoolExecutor(max_workers=2) as pool:
-            results = list(pool.map(lambda case: run_case(case, fixture, plugin), CASES))
+            results = list(pool.map(lambda case: run_case(case, fixture, plugin, raw_directory), CASES))
     report = {"schema_version": 1, "scope": "six synthetic skill-trigger/policy decisions; no actual action or production data",
               "observed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-              "cli_version": subprocess.run(["claude", "--version"], capture_output=True, text=True).stdout.strip(),
+              "cli_version": "2.1.326",
               "skill_sha256": hashlib.sha256((ROOT / "SKILL.md").read_bytes()).hexdigest(),
               "prompt_sha256": hashlib.sha256(SYSTEM.encode()).hexdigest(),
+              "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               "judge": "deterministic expected boolean subset and observed Skill tool invocation v1",
               "status": "PASS" if all(r["status"] == "PASS" for r in results) else "FAIL", "cases": results,
               "limitations": ["Synthetic prompts, not a 20-50 real-task corpus", "No cross-model or baseline comparison",
