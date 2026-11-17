@@ -54,7 +54,7 @@ WARN이면 항목을 보고하고 계속한다. 실제 테스트 실행 증거�
 
 ```bash
 git push -u origin HEAD
-gh pr create --base dev --title "<달라진 동작 한 줄>" --body-file <본문 파일> [--draft]
+gh pr create --base <확인한-기준-브랜치> --title "<달라진 동작 한 줄>" --body-file <본문 파일> [--draft]
 ```
 
 PR 게이트 hook이 확인을 요청하면 표시된 항목을 먼저 채운다. 사용자가 그대로 진행을 승인한 경우에만 계속한다.
@@ -62,4 +62,4 @@ PR 게이트 hook이 확인을 요청하면 표시된 항목을 먼저 채운다
 ## 5. 마무리
 
 - `change_record.py set-pr --pr <번호>`로 기록에 PR 번호를 채우고 커밋·push한다.
-- PR URL, 테스트 점검 판정, 변경기록 경로, ADR 판정, CI 상태를 보고한다. 머지 실행 권한은 담당자의 현재 지시와 GitHub에 기록한 승인 범위을 따른다. JD/푸름은 동등하며 로컬 PASS는 머지·운영 승인이 아니다.
+- PR URL, 테스트 점검 판정, 변경기록 경로, ADR 판정, CI 상태를 보고한다. 머지 실행 권한은 담당자의 현재 지시와 GitHub에 기록한 승인 범위를 따른다. JD/푸름은 동등하며 로컬 PASS는 머지·운영 승인이 아니다.
