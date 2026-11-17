@@ -32,3 +32,7 @@ jobs:
           for tests in skills/*/tests; do
             python3 -m unittest discover -s "$tests" -v
           done
+      - name: SDLC synthetic acceptance and gate mutations
+        run: |
+          python3 skills/gardenstep-sdlc/scripts/sdlc.py dry-run
+          python3 skills/gardenstep-sdlc/scripts/mutation_check.py

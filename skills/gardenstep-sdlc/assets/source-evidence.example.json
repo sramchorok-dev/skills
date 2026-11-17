@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "observer_id": "synthetic-observer",
+  "sources": [
+    {
+      "id": "sample-telegram",
+      "provider": "telegram",
+      "installation": {
+        "status": "PASS",
+        "connector": "synthetic",
+        "version": "v1"
+      },
+      "authentication": {
+        "status": "NOT_RUN",
+        "account_ref": "synthetic-account",
+        "checked_at": "2026-01-01T00:00:00Z"
+      },
+      "read": {
+        "status": "NOT_RUN",
+        "complete": false,
+        "missing_parts": [
+          "actual provider read"
+        ]
+      }
+    },
+    {
+      "id": "sample-figma",
+      "provider": "figma",
+      "installation": {
+        "status": "PASS",
+        "connector": "synthetic",
+        "version": "v1"
+      },
+      "authentication": {
+        "status": "NOT_RUN",
+        "account_ref": "synthetic-account",
+        "checked_at": "2026-01-01T00:00:00Z"
+      },
+      "read": {
+        "status": "NOT_RUN",
+        "complete": false,
+        "missing_parts": [
+          "actual provider read"
+        ]
+      }
+    },
+    {
+      "id": "sample-dropbox",
+      "provider": "dropbox",
+      "installation": {
+        "status": "PASS",
+        "connector": "synthetic",
+        "version": "v1"
+      },
+      "authentication": {
+        "status": "NOT_RUN",
+        "account_ref": "synthetic-account",
+        "checked_at": "2026-01-01T00:00:00Z"
+      },
+      "read": {
+        "status": "NOT_RUN",
+        "complete": false,
+        "missing_parts": [
+          "actual provider read"
+        ]
+      }
+    },
+    {
+      "id": "sample-notion",
+      "provider": "notion",
+      "installation": {
+        "status": "PASS",
+        "connector": "synthetic",
+        "version": "v1"
+      },
+      "authentication": {
+        "status": "NOT_RUN",
+        "account_ref": "synthetic-account",
+        "checked_at": "2026-01-01T00:00:00Z"
+      },
+      "read": {
+        "status": "NOT_RUN",
+        "complete": false,
+        "missing_parts": [
+          "actual provider read"
+        ]
+      }
+    }
+  ]
+}

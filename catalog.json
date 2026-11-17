@@ -24,6 +24,11 @@
       "name": "gardenstep-test-audit",
       "category": "quality",
       "description": "Gardenstep PR의 테스트 코드가 팀 테스트 규칙(E2E 필수·스멜 금지·영수증)을 지키는지 점검·판정"
+    },
+    {
+      "name": "gardenstep-sdlc",
+      "category": "quality",
+      "description": "intent/spec/plan·출처·독립 리뷰·DEV 증거의 공통 계약과 로컬 정합성 검사"
     }
   ]
 }

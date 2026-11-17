@@ -42,7 +42,7 @@ RULES: list[tuple[str, re.Pattern[str], str]] = [
     # --- GitHub: 머지·배포·설정
     ("skip-ci", re.compile(r"\[(?:skip ci|ci skip|no ci|skip actions|actions skip)\]", I),
      "[skip ci] — PR CI·빌드·DEV 배포가 돌지 않습니다 (CI 초록 없이 머지되는 경로)"),
-    ("pr-merge", re.compile(r"\bgh\s+pr\s+merge\b"), "PR 머지 — 머지는 CI 초록 + JD 승인 후에 합니다"),
+    ("pr-merge", re.compile(r"\bgh\s+pr\s+merge\b"), "PR 머지 — 머지는 필수 검증 + 담당자(JD 또는 푸름) 승인 후에 합니다"),
     ("workflow-run", re.compile(r"\bgh\s+(?:workflow\s+(?:run|enable|disable)|run\s+rerun)\b"),
      "GitHub Actions 실행 — 배포·롤백 워크플로일 수 있습니다 (오래된 run 재실행은 이전 버전 재배포 위험)"),
     ("gh-secret", re.compile(r"\bgh\s+(?:secret|variable)\s+(?:set|delete|remove)\b"), "GitHub 비밀값·변수 변경"),
@@ -52,7 +52,7 @@ RULES: list[tuple[str, re.Pattern[str], str]] = [
     # --- 데이터베이스
     ("db-write", re.compile(r"\b(?:mysql|mariadb|mysqlsh|psql)\b[^|;&]*\b(?:update\s+\w|delete\s+from|drop\s|alter\s|"
                 r"truncate\s|insert\s+into|replace\s+into|create\s|grant\s|rename\s+table)", I),
-     "DB 쓰기 SQL — 운영 DB는 조회만, 쓰기는 JD가 SQL을 승인한 경우만"),
+     "DB 쓰기 SQL — 운영 DB는 조회만, 쓰기는 담당자(JD 또는 푸름)가 SQL을 승인한 경우만"),
     ("sql-file", re.compile(r"\b(?:mysql|mariadb|psql)\b[^|;&]*\s<\s*\S+"), "SQL 파일 실행 — 내용에 쓰기 문이 있을 수 있습니다"),
     ("liquibase", re.compile(r"\bliquibase\b[^|;&]*\s(?:update|rollback|drop-?all|clear-?check-?sums|changelog-sync)\b", I),
      "Liquibase 직접 실행"),

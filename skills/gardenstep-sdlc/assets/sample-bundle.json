@@ -1,0 +1,163 @@
+{
+  "manifest": {
+    "schema_version": 1,
+    "change_id": "sample-status-copy",
+    "document_hashes": {
+      "intent": "1111111111111111111111111111111111111111111111111111111111111111",
+      "spec": "2222222222222222222222222222222222222222222222222222222222222222",
+      "plan": "3333333333333333333333333333333333333333333333333333333333333333"
+    },
+    "services": {
+      "example/service": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "harness_version": "sample-v1",
+    "author_session_id": "author-sample",
+    "requirements": [
+      {
+        "id": "R1",
+        "source_ids": [
+          "source-1"
+        ],
+        "check_ids": [
+          "unit",
+          "independent-review",
+          "live-dev"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "source-1",
+        "provider": "interview",
+        "revision": "synthetic-v1",
+        "observed_at": "2026-01-01T00:00:00Z",
+        "content_sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+      }
+    ],
+    "required_checks": [
+      {
+        "id": "unit",
+        "kind": "test"
+      },
+      {
+        "id": "independent-review",
+        "kind": "review"
+      },
+      {
+        "id": "live-dev",
+        "kind": "dev"
+      }
+    ]
+  },
+  "evidence": {
+    "schema_version": 1,
+    "change_id": "sample-status-copy",
+    "manifest_sha256": "158039bf2b881229f30e845a6aafec5e204ab8eb8b1b7f7b7dea0c9de01c029e",
+    "services": {
+      "example/service": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "harness_version": "sample-v1",
+    "checks": [
+      {
+        "id": "unit",
+        "kind": "test",
+        "status": "PASS",
+        "exit_code": 0,
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "run_id": "synthetic-unit",
+        "command": "synthetic fixture only",
+        "started_at": "2026-01-01T00:00:00Z",
+        "finished_at": "2026-01-01T00:00:01Z",
+        "runner_version": "synthetic-v1",
+        "tool_version": "synthetic-v1",
+        "artifact_uri": "fixture://sample/unit",
+        "artifact_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "model": {
+          "name": "deterministic",
+          "version": "sample-v1",
+          "prompt_version": "not-applicable",
+          "judge_name": "deterministic",
+          "judge_version": "sample-v1"
+        }
+      },
+      {
+        "id": "independent-review",
+        "kind": "review",
+        "status": "PASS",
+        "exit_code": 0,
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "run_id": "synthetic-independent-review",
+        "command": "synthetic fixture only",
+        "started_at": "2026-01-01T00:00:00Z",
+        "finished_at": "2026-01-01T00:00:01Z",
+        "runner_version": "synthetic-v1",
+        "tool_version": "synthetic-v1",
+        "artifact_uri": "fixture://sample/independent-review",
+        "artifact_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "model": {
+          "name": "synthetic-model",
+          "version": "sample-v1",
+          "prompt_version": "sample-v1",
+          "judge_name": "deterministic",
+          "judge_version": "sample-v1"
+        },
+        "reviewer_session_id": "reviewer-sample",
+        "blocking_findings": 0
+      },
+      {
+        "id": "live-dev",
+        "kind": "dev",
+        "status": "PASS",
+        "exit_code": 0,
+        "total": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "cancelled": 0,
+        "run_id": "synthetic-live-dev",
+        "command": "synthetic fixture only",
+        "started_at": "2026-01-01T00:00:00Z",
+        "finished_at": "2026-01-01T00:00:01Z",
+        "runner_version": "synthetic-v1",
+        "tool_version": "synthetic-v1",
+        "artifact_uri": "fixture://sample/live-dev",
+        "artifact_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "model": {
+          "name": "deterministic",
+          "version": "sample-v1",
+          "prompt_version": "not-applicable",
+          "judge_name": "deterministic",
+          "judge_version": "sample-v1"
+        },
+        "environment": "dev",
+        "services_before": {
+          "example/service": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "services_after": {
+          "example/service": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    ]
+  },
+  "policy": {
+    "schema_version": 1,
+    "manifest_sha256": "158039bf2b881229f30e845a6aafec5e204ab8eb8b1b7f7b7dea0c9de01c029e",
+    "required_check_ids": [
+      "unit",
+      "independent-review",
+      "live-dev"
+    ],
+    "required_source_ids": [
+      "source-1"
+    ],
+    "require_dev": true
+  }
+}
