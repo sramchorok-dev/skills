@@ -1,5 +1,5 @@
 ---
-description: 현재 브랜치를 팀 규칙대로 PR로 올린다 — 테스트 점검, 변경기록, `## 검증` 본문, dev 대상 PR 생성
+description: 현재 브랜치를 팀 규칙대로 PR로 올린다 — 테스트 점검, 변경기록, `## 검증` 본문, 확인한 기준 브랜치 대상 PR 생성
 argument-hint: "[--ready] [이슈 번호나 추가 설명]"
 ---
 
@@ -13,8 +13,9 @@ argument-hint: "[--ready] [이슈 번호나 추가 설명]"
 - `.sdlc/repository.json`이 있으면 먼저 `gardenstep-sdlc`를 적용하고 Change-ID·승인 plan·검증 상태를 연결한다. 실제 DEV 대기 상태도 PR로 기록할 수 있지만 완료로 보고하지 않는다.
 - 원격 쓰기는 승인 범위에서 아래 GitHub CLI와 기존 workflow로 진행한다. 별도 control 서버·passkey는 사용하지 않는다. 현재 구독의 관리자 직접 우회까지 기술적으로 막는다는 보장은 없다.
 
-- 레포 루트에서 실행 중인지, 현재 브랜치가 `main`·`dev`가 아닌지 확인한다. 아니면 멈추고 새 브랜치를 제안한다.
-- `git fetch origin` 후 기준 브랜치(`origin/dev`, 없으면 `origin/main`)와의 diff를 확인한다. 변경이 없으면 멈춘다.
+- 레포 루트와 원격 저장소를 확인한다. 사용자가 명시한 PR 기준 브랜치를 우선하고, 없으면 `git ls-remote --symref origin HEAD` 또는 GitHub의 defaultBranchRef로 실제 기본 브랜치를 확인한다. 예전 dev ref의 존재만으로 기준을 고르지 않는다.
+- 기준 브랜치의 배포 workflow를 읽어 운영 배포 여부를 구분한다. 현재 브랜치가 해당 기준/운영 브랜치이면 별도 작업 브랜치·worktree에서 진행한다.
+- `git fetch origin` 후 확인한 `origin/<기준-브랜치>`와의 diff를 확인한다. 변경이 없으면 멈춘다.
 - 커밋 안 한 변경이 있으면 목록을 보여 주고, 포함할지 사용자에게 묻는다.
 
 ## 1. 테스트 점검
@@ -54,7 +55,7 @@ WARN이면 항목을 보고하고 계속한다. 실제 테스트 실행 증거�
 
 ```bash
 git push -u origin HEAD
-gh pr create --base dev --title "<달라진 동작 한 줄>" --body-file <본문 파일> [--draft]
+gh pr create --base <확인한-기준-브랜치> --title "<달라진 동작 한 줄>" --body-file <본문 파일> [--draft]
 ```
 
 PR 게이트 hook이 확인을 요청하면 표시된 항목을 먼저 채운다. 사용자가 그대로 진행을 승인한 경우에만 계속한다.
@@ -62,4 +63,4 @@ PR 게이트 hook이 확인을 요청하면 표시된 항목을 먼저 채운다
 ## 5. 마무리
 
 - `change_record.py set-pr --pr <번호>`로 기록에 PR 번호를 채우고 커밋·push한다.
-- PR URL, 테스트 점검 판정, 변경기록 경로, ADR 판정, CI 상태를 보고한다. 머지 실행 권한은 담당자의 현재 지시와 GitHub에 기록한 승인 범위을 따른다. JD/푸름은 동등하며 로컬 PASS는 머지·운영 승인이 아니다.
+- PR URL, 테스트 점검 판정, 변경기록 경로, ADR 판정, CI 상태를 보고한다. 머지 실행 권한은 담당자의 현재 지시와 GitHub에 기록한 승인 범위를 따른다. JD/푸름은 동등하며 로컬 PASS는 머지·운영 승인이 아니다.
